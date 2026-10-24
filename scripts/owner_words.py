@@ -3,7 +3,9 @@
 """Слова владельца из стенограмм Claude Code: первоисточник аудита и проверка подписи цитатой.
 
 Только процессор, ни одного вызова модели. Берутся реплики человека (origin.kind == human, у старых записей без origin:
-без promptSource и не isMeta); служебные вставки (<...>, отзывы хуков, тексты скилов, продолжения после сжатия) отброшены;
+без promptSource и не isMeta), реплики, набранные, пока модель работала (вложение queued_command с origin human: обычной
+записи user у них нет, без этого теряются отмены и поправки на ходу), и ответы на AskUserQuestion (кроме отказа отвечать);
+служебные вставки (<...>, отзывы хуков, тексты скилов, продолжения после сжатия, сообщения других сессий) отброшены;
 блоки <pasted_content> вырезаются из текста владельца и помечаются полем pasted (вставленный лог или чужой пост не его слова).
 
   python owner_words.py collect --out DIR [--keys REGEX] [--since 2026-01-01] [--chunks 4] [--root ~/.claude/projects]
@@ -35,27 +37,54 @@ def norm(s: str) -> str:
     return " ".join(re.sub(r"[^0-9a-zа-я]+", " ", s).split())
 
 
-def human_text(r: dict) -> tuple[str, bool] | None:
-    """(текст владельца без вставок, была ли вставка) или None, если запись не реплика человека."""
-    if r.get("type") != "user" or r.get("isSidechain") or r.get("isMeta"):
-        return None
-    origin = r.get("origin")
-    if isinstance(origin, dict):
-        if origin.get("kind") != "human":
-            return None
-    elif r.get("promptSource") is not None:
-        return None
-    c = (r.get("message") or {}).get("content")
+def joined(c) -> str:
     if isinstance(c, list):
         c = " ".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
-    t = str(c or "").strip()
-    if not t:
-        return None
+    return str(c or "").strip()
+
+
+def clean(t: str, kind: str) -> tuple[str, bool, str] | None:
     pasted = "<pasted_content" in t
     own = PASTED.sub(" ", t).strip()
     if not own or own.startswith(META) or "task-notification" in own[:80]:
         return None
-    return own, pasted
+    return own, pasted, kind
+
+
+def human_texts(r: dict) -> list[tuple[str, bool, str]]:
+    """[(текст владельца без вставок, была ли вставка, вид)] из записи; пусто, если в ней нет слов человека.
+
+    Вид: prompt = обычная реплика; queued = реплика, набранная, пока модель работала (в стенограмме это вложение
+    queued_command, обычной записи user у неё нет); answer = ответ на вопрос AskUserQuestion (выбор или свой текст)."""
+    if r.get("isSidechain") or r.get("isMeta"):
+        return []
+    a = r.get("attachment")
+    if r.get("type") == "attachment" and isinstance(a, dict) and a.get("type") == "queued_command":
+        origin = a.get("origin")
+        if isinstance(origin, dict) and origin.get("kind") != "human":   # peer, task-notification: не владелец
+            return []
+        if origin is None and a.get("commandMode") != "prompt":
+            return []
+        hit = clean(joined(a.get("prompt")), "queued")
+        return [hit] if hit else []
+    if r.get("type") != "user":
+        return []
+    tr = r.get("toolUseResult")
+    if isinstance(tr, dict) and isinstance(tr.get("answers"), dict):
+        out = []
+        for q, ans in tr["answers"].items():
+            ans = str(ans).strip()
+            if ans and not ans.startswith("[User dismissed"):
+                out.append((ans, False, "answer: " + str(q)[:200]))
+        return out
+    origin = r.get("origin")
+    if isinstance(origin, dict):
+        if origin.get("kind") != "human":
+            return []
+    elif r.get("promptSource") is not None:
+        return []
+    hit = clean(joined((r.get("message") or {}).get("content")), "prompt")
+    return [hit] if hit else []
 
 
 def records(root: Path):
@@ -66,15 +95,14 @@ def records(root: Path):
             continue
         with fh:
             for line in fh:
-                if '"user"' not in line:
+                if '"user"' not in line and '"queued_command"' not in line:
                     continue
                 try:
                     r = json.loads(line)
                 except ValueError:
                     continue
-                ht = human_text(r)
-                if ht:
-                    yield f, r, ht[0], ht[1]
+                for text, pasted, kind in human_texts(r):
+                    yield f, r, text, pasted, kind
 
 
 def epoch(ts) -> float:
@@ -86,7 +114,7 @@ def collect(a) -> int:
     keys = re.compile(a.keys, re.I) if a.keys else None
     since = epoch(a.since + "T00:00:00+00:00") if a.since else None
     seen: dict[str, dict] = {}
-    for f, r, text, pasted in records(root):
+    for f, r, text, pasted, kind in records(root):
         ts = r.get("timestamp") or ""
         try:
             if since is not None and epoch(ts) < since:
@@ -97,7 +125,8 @@ def collect(a) -> int:
             continue
         h = hashlib.sha1(norm(text).encode("utf-8")).hexdigest()
         if h not in seen or ts < seen[h]["ts"]:
-            seen[h] = {"ts": ts, "session": f.stem[:8], "project": f.parent.name, "text": text[:3000], "pasted": pasted}
+            seen[h] = {"ts": ts, "session": f.stem[:8], "project": f.parent.name, "kind": kind, "text": text[:3000],
+                       "pasted": pasted}
     rows = sorted(seen.values(), key=lambda x: x["ts"])
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -113,7 +142,10 @@ def collect(a) -> int:
                     fo.write(json.dumps(x, ensure_ascii=False) + "\n")
     span = f"{rows[0]['ts'][:10]} .. {rows[-1]['ts'][:10]}" if rows else "-"
     chars = sum(len(x["text"]) for x in rows)
-    print(f"реплик {len(rows)} ({span}), знаков {chars}, со вставками {sum(x['pasted'] for x in rows)}, кусков {a.chunks}: {out}")
+    kinds = {k: sum(x["kind"].split(":")[0] == k for x in rows) for k in ("prompt", "queued", "answer")}
+    print(f"реплик {len(rows)} ({span}; обычных {kinds['prompt']}, набранных во время работы {kinds['queued']}, "
+          f"ответов на вопросы {kinds['answer']}), знаков {chars}, со вставками {sum(x['pasted'] for x in rows)}, "
+          f"кусков {a.chunks}: {out}")
     return 0
 
 
@@ -122,7 +154,7 @@ def said(quote: str, root: Path, after=None) -> dict | None:
     if not q:
         return None
     lo = epoch(after) if after else None
-    for f, r, text, _ in records(root):
+    for f, r, text, _, kind in records(root):
         try:
             if lo is not None and epoch(r.get("timestamp")) < lo:
                 continue
@@ -130,7 +162,7 @@ def said(quote: str, root: Path, after=None) -> dict | None:
             continue
         t = norm(text)
         if (len(q) >= MIN_SUB and q in t) or t == q:
-            return {"ts": r.get("timestamp"), "session": f.stem[:8], "text": text}
+            return {"ts": r.get("timestamp"), "session": f.stem[:8], "kind": kind, "text": text}
     return None
 
 
@@ -158,7 +190,7 @@ def main() -> int:
     if not hit:
         print("не найдено: владелец так не говорил" + (f" после {a.after}" if a.after else ""))
         return 1
-    print(hit["ts"], hit["session"], hit["text"][:300])
+    print(hit["ts"], hit["session"], hit["kind"].split(":")[0], hit["text"][:300])
     return 0
 
 
