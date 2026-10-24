@@ -1,0 +1,10 @@
+{
+  "name": "ЗАМОК ВЫПУСКА",
+  "protected": ["dist/", "U:/", "/mnt/u/"],
+  "protected_ext": [],
+  "allowed": ["release_gate\\.py\\s+(release|check|find|stamp)\\b"],
+  "deny_tools": ["mcp__.*__file_upload"],
+  "state_dirs": [".claude/state/"],
+  "help": "Путь один: python scripts/release_gate.py release <файл> --dest dist/ (нужен вердикт судьи по sha этого файла: release_gate.py stamp). Снять замок может только владелец своими словами.",
+  "fail_closed": true
+}

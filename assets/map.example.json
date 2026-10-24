@@ -1,0 +1,33 @@
+{
+  "name": "Выпуск прошивки (пример)",
+  "date": "2026-10-24",
+  "stations": [
+    {"id": "owner", "name": "Владелец: задача и решение", "external": true, "status": "ok", "locks": []},
+    {"id": "build", "name": "Сборка файла", "files": ["tools/build.py"], "inputs": ["owner"], "arrays": ["rules"],
+     "outputs": ["artifact"], "locks": ["rules.check() внутри save()"], "status": "ok", "evidence": "tools/build.py:88", "problems": []},
+    {"id": "judge", "name": "Суд другой моделью", "files": ["tools/judge.py"], "inputs": ["artifact"], "outputs": ["verdict"],
+     "locks": [], "status": "weak", "evidence": "tools/judge.py:40", "problems": ["P-3: судья молча пропускает при таймауте"]},
+    {"id": "release", "name": "Дверь выпуска", "files": ["scripts/release_gate.py"], "inputs": ["artifact", "verdict"],
+     "outputs": ["device"], "locks": ["sha вердикта = sha файла", "хук guard_hook на боковые двери"], "status": "ok",
+     "evidence": "scripts/release_gate.py:95", "problems": []},
+    {"id": "device", "name": "Устройство потребителя", "external": true, "status": "ok", "locks": []},
+    {"id": "old_flash", "name": "Старый скрипт прошивки", "files": ["tools/flash_old.py"], "locks": [], "status": "dead",
+     "evidence": "tools/flash_old.py:1", "problems": ["P-7: пишет на устройство мимо двери"]}
+  ],
+  "arrays": [
+    {"id": "rules", "path": "data/rules.json", "what": "лист решений по полям", "writers": ["make_rules.py"], "readers": ["build"], "in_product": true},
+    {"id": "artifact", "path": "build/", "what": "собранный файл", "writers": ["build"], "readers": ["judge", "release"], "in_product": true},
+    {"id": "verdict", "path": "build/*.verdict.json", "what": "вердикт по sha", "writers": ["judge"], "readers": ["release"], "in_product": true},
+    {"id": "notes", "path": "docs/old_notes.md", "what": "старые заметки", "writers": [], "readers": [], "in_product": false}
+  ],
+  "flows": [
+    {"from": "owner", "to": "build", "what": "задача", "path": "выпуск"},
+    {"from": "build", "to": "artifact", "what": "файл", "path": "выпуск"},
+    {"from": "artifact", "to": "judge", "what": "на суд", "path": "выпуск"},
+    {"from": "judge", "to": "verdict", "what": "вердикт", "path": "выпуск"},
+    {"from": "verdict", "to": "release", "what": "sha", "path": "выпуск"},
+    {"from": "artifact", "to": "release", "what": "файл", "path": "выпуск"},
+    {"from": "release", "to": "device", "what": "копия сверена", "path": "выпуск"},
+    {"from": "old_flash", "to": "device", "what": "мимо двери", "path": "боковые двери"}
+  ]
+}
