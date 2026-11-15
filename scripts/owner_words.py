@@ -29,6 +29,9 @@ META = ("<", "This session is being continued", "Continue from where you left of
         "[Cross-session", "Caveat:", "[SYSTEM NOTIFICATION", "[Request interrupted", "Stop hook feedback",
         "Base directory for this skill", "Commit the working tree", "Run the \"", "Your response above")
 PASTED = re.compile(r"<pasted_content.*?</pasted_content[^>]*>", re.S)
+# приложение приклеивает к реплике владельца служебный блок (сводка форка, список связанных сессий): блок вырезается, его
+# текст не слова владельца, а реплика за ним остаётся (Гор 26.10 «да, научи сторожа»: свежие реплики терялись целиком)
+REMIND = re.compile(r"<system-reminder>.*?</system-reminder>", re.S)
 MIN_SUB = 12
 
 
@@ -45,7 +48,7 @@ def joined(c) -> str:
 
 def clean(t: str, kind: str) -> tuple[str, bool, str] | None:
     pasted = "<pasted_content" in t
-    own = PASTED.sub(" ", t).strip()
+    own = PASTED.sub(" ", REMIND.sub(" ", t)).strip()
     if not own or own.startswith(META) or "task-notification" in own[:80]:
         return None
     return own, pasted, kind
