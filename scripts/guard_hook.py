@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Хук PreToolUse на боковые двери: продукт попадает в защищённое место только законным путём (например release_gate.py).
+"""PreToolUse hook on the side doors: the product reaches a protected place only by the legitimate path (for example release_gate.py).
 
-Настройка: JSON рядом с хуком (guard_config.json) или путь в переменной GUARD_CONFIG. Поля (пример assets/guard_config.example.json):
-  name           имя замка в тексте отказа
-  protected      защищённые места: префиксы путей (U:/, dist/, /mnt/flash/) или регулярки с префиксом re:
-  protected_ext  если задано, замок только для этих расширений (.cmo, .mp4); пусто = любые файлы
-  allowed        регулярки законного пути (сегмент команды, где он стоит, не проверяется)
-  deny_tools     регулярки имён инструментов, запрещённых всегда (загрузка через браузер, терминал приложения)
-  state_dirs     папки состояния замков: запись туда инструментами агента запрещена всегда
-  help           что делать вместо: путь один, что прочитать, кто снимает
-  fail_closed    true = ошибка разбора на записи = отказ (по умолчанию true)
+Configuration: a JSON file next to the hook (guard_config.json) or a path in the GUARD_CONFIG variable. Fields (example: assets/guard_config.example.json):
+  name           the lock's name in the refusal text
+  protected      protected places: path prefixes (U:/, dist/, /mnt/flash/) or regexes with the prefix re:
+  protected_ext  if set, the lock applies only to these extensions (.cmo, .mp4); empty = any files
+  allowed        regexes of the legitimate path (the command segment that contains it is not checked)
+  deny_tools     regexes of tool names that are always forbidden (browser upload, an application's terminal)
+  state_dirs     lock state folders: writing there with the agent's tools is always forbidden
+  help           what to do instead: the one path, what to read, who can lift the lock
+  fail_closed    true = a parse error on a write means a refusal (default true)
 
-Законы хука: всегда код 0, отказ = JSON permissionDecision deny; чтение (cat, grep, ls, Get-Content) не производство;
-команда режется на сегменты по ; && || | и переводу строки, cd внутри команды меняет папку для следующих сегментов;
-закодированные команды (-EncodedCommand, base64 | sh) с защищённым местом в контексте запрещены: их нельзя разобрать.
-HOOK_SMOKE=1: ничего не пишет в журнал. Регулярка хука = страховка; замок = единственная дверь выпуска.
+The hook's laws: always exit code 0, a refusal = JSON permissionDecision deny; reading (cat, grep, ls, Get-Content) is not production;
+the command is cut into segments on ; && || | and newlines, and a cd inside the command changes the folder for the following segments;
+encoded commands (-EncodedCommand, base64 | sh) are forbidden while protected places are configured: they cannot be parsed.
+HOOK_SMOKE=1: writes nothing to the log. The hook's regex is the backstop; the lock is the single release door.
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def load_cfg() -> dict:
     p = os.environ.get("GUARD_CONFIG") or str(Path(__file__).with_name("guard_config.json"))
     with open(p, encoding="utf-8") as f:
         cfg = json.load(f)
-    cfg.setdefault("name", "ЗАМОК")
+    cfg.setdefault("name", "LOCK")
     cfg.setdefault("fail_closed", True)
     return cfg
 
@@ -72,7 +72,7 @@ def ext_ok(text: str, cfg: dict) -> bool:
     if not exts:
         return True
     t = norm(text)
-    return any(e in t for e in exts) or bool(re.search(r"(^|\s)(-r|-a|/e|/s|-recurse)\b|\*", t))  # папкой или маской
+    return any(e in t for e in exts) or bool(re.search(r"(^|\s)(-r|-a|/e|/s|-recurse)\b|\*", t))  # by folder or by mask
 
 
 def in_state(text: str, cfg: dict) -> bool:
@@ -96,7 +96,7 @@ def deny(cfg: dict, why: str) -> None:
 def check_shell(cmd: str, cwd: str, cfg: dict) -> str | None:
     allowed = [re.compile(x, re.I) for x in cfg.get("allowed", [])]
     if ENCODED.search(cmd) and cfg.get("protected"):
-        return "закодированную команду нельзя разобрать, а замок стоит на защищённых местах"
+        return "an encoded command cannot be parsed, and this lock guards protected places"
     here = cwd
     for seg in SEG.split(cmd):
         s = seg.strip()
@@ -111,14 +111,14 @@ def check_shell(cmd: str, cwd: str, cfg: dict) -> str | None:
         targets = REDIRECT.findall(s)
         rel = lambda t: not re.match(r"^([a-z]:|/|~|\\\\)", t, re.I)  # noqa: E731
         if any(in_state(t, cfg) for t in targets) or (in_state(s, cfg) and WRITE_VERB.search(s)):
-            return "запись в состояние замка запрещена"
+            return "writing to the lock's state is forbidden"
         redir_bad = any((place_hits(t, cfg) or (rel(t) and place_hits(here.rstrip('/\\') + '/', cfg))) and ext_ok(t, cfg) for t in targets)
         if READ_ONLY.match(s) or not WRITE_VERB.search(s):
-            if redir_bad:                     # читать можно, перенаправить вывод в защищённое место нельзя
-                return "вывод команды пишется в защищённое место: " + s[:160]
+            if redir_bad:                     # reading is fine, redirecting the output into a protected place is not
+                return "the command's output is written into a protected place: " + s[:160]
             continue
         if (place_hits(s, cfg) or place_hits(here.rstrip('/\\') + '/', cfg) or redir_bad) and ext_ok(s, cfg):
-            return "запись или копия в защищённое место мимо законного пути: " + s[:160]
+            return "a write or copy into a protected place that bypasses the legitimate path: " + s[:160]
     return None
 
 
@@ -132,14 +132,14 @@ def main() -> None:
         ti = data.get("tool_input") or {}
         for rx in cfg.get("deny_tools", []):
             if re.fullmatch(rx, tool):
-                deny(cfg, f"инструмент {tool} закрыт этим замком")
+                deny(cfg, f"the tool {tool} is closed by this lock")
                 return
         if tool in WRITE_TOOLS:
             fp = str(ti.get("file_path") or ti.get("notebook_path") or "")
             if in_state(fp, cfg):
-                deny(cfg, "запись в состояние замка запрещена")
+                deny(cfg, "writing to the lock's state is forbidden")
             elif place_hits(fp, cfg) and ext_ok(fp, cfg):
-                deny(cfg, f"запись файла в защищённое место мимо законного пути: {fp}")
+                deny(cfg, f"a file write into a protected place that bypasses the legitimate path: {fp}")
             return
         if tool in SHELL_TOOLS:
             why = check_shell(str(ti.get("command") or ""), str(data.get("cwd") or ""), cfg)
@@ -148,7 +148,7 @@ def main() -> None:
     except Exception as e:  # noqa: BLE001
         tool = str((data or {}).get("tool_name") or "")
         if cfg and cfg.get("fail_closed") and (tool in WRITE_TOOLS or tool in SHELL_TOOLS):
-            deny(cfg, f"ошибка замка ({type(e).__name__}): на записи ошибка = отказ")
+            deny(cfg, f"lock error ({type(e).__name__}): on a write an error means a refusal")
 
 
 if __name__ == "__main__":

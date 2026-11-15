@@ -1,24 +1,24 @@
-# WORKFLOW: замки по аудиту <контур> (<дата>)
+# WORKFLOW: locks from the audit of <pipeline> (<date>)
 
-Слово владельца <дата>: «<дословно: чини, встраивай, ставь замки>». Вход: `AUDIT.md` раздел 9 (план правок).
+The owner's word, <date>: "<verbatim: fix it, build it in, set the locks>". Input: `AUDIT.md` section 9 (the fix plan).
 
-## Шаг 0, до правок
-- Найти, что уже есть: существующие замки, хуки, тесты этого контура (`<команды поиска и их вывод>`). Своё чинить, не строить рядом второе.
-- Записать состояние в `STATE.md` (на случай сжатия контекста).
+## Step 0, before any edits
+- Find what already exists: this pipeline's existing locks, hooks and tests (`<search commands and their output>`). Fix your own; do not build a second one next to it.
+- Write the state to `STATE.md` (in case of context compaction).
 
-## Пункты
-| п. | закон (дословно или файл) | тип замка | точка на пути | тест обходов | исторический брак для прогона | решает владелец |
+## Items
+| # | law (verbatim or file) | lock type | point on the path | bypass test | historical defect for the run | owner decides |
 |---|---|---|---|---|---|---|
-| 1 | <...> | единственная дверь + вердикт по sha | `<файл:функция>` | `<test_*.py, кейсы>` | `<файл, который раньше прошёл>` | нет |
+| 1 | <...> | single door + verdict bound to the sha | `<file:function>` | `<test_*.py, cases>` | `<the file that got through before>` | no |
 
-## Доводы против (пункты, где замок не ставится)
-- <пункт>: <почему не нужен>, проверка: `<команда>` -> `<вывод>`.
+## Reasons against (items where no lock is added)
+- <item>: <why it is not needed>, check: `<command>` -> `<output>`.
 
-## Не делаю без владельца
-Пароли и ключи, выкатка в прод, ослабление существующих замков, регистрация хуков, правка состояния замков.
+## What I do not do without the owner
+Passwords and keys, deploying to production, weakening existing locks, hook registration, editing lock state.
 
-## Готово, когда
-- Каждый замок: законный путь проходит, каждая дверь из каталога получает отказ, ошибка на производстве = отказ.
-- Каждый замок прогнан на историческом браке: отказ с понятной причиной; эталон проходит.
-- Все тесты хуков контура зелёные с числом проверок.
-- Отчёт владельцу: что заперто, что осталось текстом и почему, один вопрос.
+## Done when
+- Every lock: the legitimate path passes, every door from the catalog is refused, an error on production means a refusal.
+- Every lock was run against the historical defect: a refusal with a clear reason; the reference sample passes.
+- All hook tests of the pipeline are green, with the number of checks.
+- The report to the owner: what is locked, what is still text and why, one question.

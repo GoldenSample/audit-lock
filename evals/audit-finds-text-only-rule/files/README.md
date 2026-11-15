@@ -1,8 +1,8 @@
 # firmware-tool
 
-Правила проекта:
-1. Прошивка попадает в `dist/` только через `scripts/release.py`, и только после ревью (`build/review.json`, поле `approved`).
-2. Ревью делает не автор сборки.
-3. После правки прошивки ревью делается заново.
+Project rules:
+1. Firmware reaches `dist/` only through `scripts/release.py`, and only after a review (`build/review.json`, the `approved` field).
+2. The review is not done by the author of the build.
+3. After the firmware is edited, the review is done again.
 
-Сборка: `make build`. Выпуск: `make release`.
+Build: `make build`. Release: `make release`.

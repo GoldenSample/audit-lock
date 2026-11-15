@@ -1,10 +1,10 @@
-# Хуки Claude Code для замков
+# Claude Code hooks for locks
 
-Короткая шпаргалка под замки. Формат событий и полей со временем меняется: перед постройкой сверь с актуальной документацией Claude Code (раздел hooks) и проверь живым прогоном.
+A short cheat sheet for building locks. The format of events and fields changes over time: before building, compare with the current Claude Code documentation (the hooks section) and verify with a live run.
 
-## Регистрация
+## Registration
 
-Проектная (`.claude/settings.json` или `.claude/settings.local.json`) или пользовательская (`~/.claude/settings.json`):
+Per project (`.claude/settings.json` or `.claude/settings.local.json`) or per user (`~/.claude/settings.json`):
 
 ```json
 {
@@ -23,34 +23,34 @@
 }
 ```
 
-- `matcher` = регулярка по имени инструмента. Инструменты MCP называются `mcp__<сервер>__<инструмент>`: их легко забыть, и тогда загрузка через браузер или терминал приложения идёт мимо замка.
-- На Windows интерпретатор может называться `python`, `python3` или `py`, а `python` бывает заглушкой магазина, которая ничего не запускает. Надёжная команда перебирает варианты и проверяет, что интерпретатор живой:
-  `sh -c 'F="$CLAUDE_PROJECT_DIR/.claude/hooks/guard_hook.py"; for P in python3 python py; do if command -v "$P" >/dev/null 2>&1 && "$P" -c "" >/dev/null 2>&1; then PYTHONIOENCODING=utf-8 exec "$P" "$F"; fi; done; echo "ЗАМОК НЕ РАБОТАЕТ: не найден python"; exit 0'`.
-  Если интерпретатора нет, хук говорит об этом вслух, а не молча пропускает производство.
-- Вывод хука в UTF-8 (`PYTHONIOENCODING=utf-8` или перенастройка stdout в коде), иначе кириллица в причине отказа превращается в мусор или в пустой ответ.
+- `matcher` is a regex over the tool name. MCP tools are named `mcp__<server>__<tool>`: they are easy to forget, and then an upload through the browser or an application's terminal goes around the lock.
+- On Windows the interpreter may be called `python`, `python3` or `py`, and `python` can be a Store stub that runs nothing. A reliable command tries the variants and checks that the interpreter is alive:
+  `sh -c 'F="$CLAUDE_PROJECT_DIR/.claude/hooks/guard_hook.py"; for P in python3 python py; do if command -v "$P" >/dev/null 2>&1 && "$P" -c "" >/dev/null 2>&1; then PYTHONIOENCODING=utf-8 exec "$P" "$F"; fi; done; echo "LOCK NOT WORKING: python not found"; exit 0'`.
+  If there is no interpreter, the hook says so out loud and does not silently let production through.
+- The hook's output is UTF-8 (`PYTHONIOENCODING=utf-8` or reconfiguring stdout in the code); otherwise non-ASCII text in the refusal reason turns into garbage or an empty answer.
 
-## Вход (stdin, JSON)
+## Input (stdin, JSON)
 
-Общие поля: `session_id`, `transcript_path`, `cwd`, `hook_event_name`.
-- PreToolUse и PostToolUse: `tool_name`, `tool_input` (для Bash `command`, для Write `file_path` и `content`, для Edit `file_path`, `old_string`, `new_string`), у PostToolUse ещё ответ инструмента.
+Common fields: `session_id`, `transcript_path`, `cwd`, `hook_event_name`.
+- PreToolUse and PostToolUse: `tool_name`, `tool_input` (for Bash `command`; for Write `file_path` and `content`; for Edit `file_path`, `old_string`, `new_string`); PostToolUse also has the tool's response.
 - UserPromptSubmit: `prompt`.
 - SessionStart: `source` (`startup`, `resume`, `clear`, `compact`).
 - PreCompact: `trigger` (`manual`, `auto`).
 
-## Выход
+## Output
 
-- Отказ PreToolUse: код 0 и в stdout
-  `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "что запрещено и какой путь разрешён"}}`.
-  Причину отказа модель видит и по ней идёт законным путём, поэтому пиши в причину путь, а не только «нельзя».
-- Подмешать контекст (UserPromptSubmit, SessionStart): `{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "..."}}`.
-- Не дать закончить ход (Stop): `{"decision": "block", "reason": "чего не хватает в ответе"}`. Пример: в ходе было производство, а в ответе нет строки, какие правила применены.
-- Код выхода 2 тоже блокирует (stderr уходит модели), но структурный ответ надёжнее и читается одинаково на всех событиях.
+- A PreToolUse refusal: exit code 0 and, on stdout,
+  `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "what is forbidden and which path is permitted"}}`.
+  The model sees the refusal reason and follows it onto the legitimate path, so put the path into the reason, not just "not allowed".
+- Adding context (UserPromptSubmit, SessionStart): `{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "..."}}`.
+- Keeping the turn from ending (Stop): `{"decision": "block", "reason": "what is missing from the answer"}`. Example: the turn included production, but the answer has no line saying which rules were applied.
+- Exit code 2 also blocks (stderr goes to the model), but a structured answer is more reliable and reads the same on every event.
 
-## Приёмы, которые окупились
+## Techniques that paid off
 
-- **Журнал сессии в файле состояния хука.** PostToolUse на `Read` засчитывает, какие строки файла прочитаны; PreToolUse на производстве сверяет «прочитано целиком в текущей эпохе». SessionStart с `compact` начинает новую эпоху: чтения до сжатия не в счёт.
-- **PreCompact пишет состояние задачи** (последние реплики владельца, план, прочитанное, папка работы, незакоммиченное) в файл, SessionStart с `compact` печатает его обратно первым блоком.
-- **Гейт фокуса.** UserPromptSubmit подмешивает последние 5 реплик владельца: ни одно требование не теряется молча после длинной работы.
-- **Фоновый судья.** Запись файла плана (`WORKFLOW*.md`) запускает судью в фоне, вердикт пишется в файл рядом с планом с полем `plan_sha`. Хук сверяет `plan_sha` с текущим файлом: вердикт по старой версии не открывает замок.
-- **Stop-сверка заявлений.** Если ответ называет прочитанные файлы или пройденные станции, хук сверяет названное с журналом и файлами на диске. Назвал, а в журнале нет = блок с перечнем расхождений.
-- **Тест харнеса.** Каждый хук гоняется подачей JSON в stdin, как это делает харнес (`scripts/test_hook.py`), включая кодировку и переменные окружения.
+- **A session log in the hook's state file.** PostToolUse on `Read` records which lines of a file were read; PreToolUse on production checks "read in full in the current epoch". SessionStart with `compact` starts a new epoch: reads from before compaction do not count.
+- **PreCompact writes the task state** (the owner's latest messages, the plan, what was read, the working folder, uncommitted changes) to a file, and SessionStart with `compact` prints it back as the first block.
+- **The focus gate.** UserPromptSubmit adds the owner's last 5 messages: no requirement gets silently lost after a long stretch of work.
+- **A background judge.** Writing a plan file (`WORKFLOW*.md`) starts the judge in the background, and the verdict is written to a file next to the plan with a `plan_sha` field. The hook compares `plan_sha` with the current file: a verdict on an old version does not open the lock.
+- **A Stop check of claims.** If the answer names files that were read or stations that were passed, the hook compares what was named with the log and the files on disk. Named but not in the log means a block with the list of discrepancies.
+- **A harness test.** Every hook is run by feeding JSON to stdin the way the harness does (`scripts/test_hook.py`), including the encoding and the environment variables.

@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-SUMMARY.md начинается с одной фразы смысла и заканчивается одним главным вопросом с рекомендацией, без таблиц
+SUMMARY.md starts with one sentence that states the point and ends with one main question with a recommendation, without tables

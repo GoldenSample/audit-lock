@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-Файлы репо (Makefile, scripts/build.py, scripts/release.py, README.md) не изменены: аудит только читал
+The repo's files (Makefile, scripts/build.py, scripts/release.py, README.md) are unchanged: the audit only read

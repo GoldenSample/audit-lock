@@ -1,4 +1,4 @@
-"""Выпуск прошивки в dist/ после ревью."""
+"""Releases the firmware to dist/ after a review."""
 import json
 import shutil
 import sys
@@ -6,6 +6,6 @@ import sys
 src = sys.argv[1]
 review = json.load(open("build/review.json", encoding="utf-8"))
 if not review.get("approved"):
-    sys.exit("ревью не пройдено")
+    sys.exit("the review has not passed")
 shutil.copy(src, "dist/")
-print("выпущено", src)
+print("released", src)

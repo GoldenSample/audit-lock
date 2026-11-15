@@ -1,37 +1,37 @@
-# АУДИТ <контур> (сводный отчёт, <дата>)
+# AUDIT of <pipeline> (consolidated report, <date>)
 
-Задача владельца <дата>: «<дословно>». Метод: <чей принцип>, <число> агентов, только чтение.
+The owner's task, <date>: "<verbatim>". Method: <whose principle>, <number> agents, read only.
 
-## 1. Смысл в пяти строках
-<что это значит для владельца человеческими словами: что держится, что нет, что опаснее всего>
+## 1. The point in five lines
+<what this means for the owner in human words: what holds, what does not, what is most dangerous>
 
-## 2. Опись по участкам
-<по участку абзац: что есть, что идёт в продукт, что лежит мёртвым грузом>
+## 2. Inventory by section
+<a paragraph per section: what is there, what goes into the product, what is dead weight>
 
-## 3. Проблемы прода (только ПОДТВЕРЖДЕНО и ЧАСТИЧНО)
-### Высокие
-- **<id>.** <что>. Опора: <путь:строка>. Проверяющий: <вердикт и его опора>. Сценарий: <...>.
-### Средние
-### Низкие
+## 3. Production problems (CONFIRMED and PARTIAL only)
+### High
+- **<id>.** <what>. Support: <path:line>. Verifier: <verdict and its support>. Scenario: <...>.
+### Medium
+### Low
 
-## 4. Вне замков и почему (с заверением другой моделью)
-- <закон> -> <где держится> -> <почему нет замка>. Заверитель: <согласен / спорит: чем>.
+## 4. Outside the locks, and why (with the cross-model review)
+- <law> -> <where it is held> -> <why there is no lock>. Reviewer: <agrees / disagrees: on what>.
 
-## 5. Путь модели: где проходит мимо
-## 6. Путь потребителя: где уходит или получает брак
-## 7. Противоречия (слова владельца против кода, скилов, памяти)
-## 8. Статус пунктов прошлого аудита
+## 5. The model's path: where it walks past
+## 6. The consumer's path: where they leave or receive a defect
+## 7. Contradictions (the owner's words against code, skills, memory)
+## 8. Status of the previous audit's items
 
-## 9. План правок по очереди
-1. <что> | где <путь> | замок <тип из lock-patterns> | проверка <тест или команда> | решает владелец: <да/нет>
+## 9. Fix plan, in order
+1. <what> | where <path> | lock <type from lock-patterns> | check <test or command> | owner decides: <yes/no>
 
-## 10. Вопросы владельцу (до 8, с рекомендацией)
-1. <вопрос>? Рекомендация: <что и почему>.
+## 10. Questions for the owner (up to 8, each with a recommendation)
+1. <question>? Recommendation: <what and why>.
 
-## Карта и чертежи
-`BRANCH_MAP.json`, проверка: `<вывод map_check.py>`. Чертежи: `img/map.html`.
+## Map and diagrams
+`BRANCH_MAP.json`, check: `<output of map_check.py>`. Diagrams: `img/map.html`.
 
-## Не проверено
-## Опровергнуто проверяющим (одной строкой каждое)
-## Как проверялось
-<роли, число агентов, модели, что запускалось, что не трогали>
+## Not checked
+## Refuted by the verifier (one line each)
+## How it was checked
+<roles, number of agents, models, what was run, what was not touched>

@@ -1,4 +1,4 @@
-"""Собирает build/app.bin и черновик ревью (поля заполняет тот же скрипт)."""
+"""Builds build/app.bin and a draft review (the fields are filled in by this same script)."""
 import json
 import os
 
@@ -8,4 +8,4 @@ with open("build/app.bin", "wb") as f:
 review = {"file": "app.bin", "approved": True, "reviewer": os.environ.get("USER", "builder"), "author": os.environ.get("USER", "builder")}
 with open("build/review.json", "w", encoding="utf-8") as f:
     json.dump(review, f)
-print("build/app.bin готов, review.json записан")
+print("build/app.bin is ready, review.json written")

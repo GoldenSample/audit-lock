@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-Есть тест обходов (файл test_*.py или кейсы для харнеса) хотя бы с пятью дверями, он запущен, и в ответе есть число прошедших проверок
+There is a bypass test (a test_*.py file or cases for the harness) with at least five doors, it was run, and the answer gives the number of checks passed

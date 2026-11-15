@@ -1,13 +1,13 @@
-# <контур>: выжимка аудита (<дата>)
+# <pipeline>: audit summary (<date>)
 
-<Первая строка: смысл для владельца одной фразой. Например: «Профиль на флешку уходит только через проверку, а вот сторож разъёма сам не узнаёт о пересадке и шлёт ложные тревоги».>
+<First line: the point for the owner in one sentence. For example: "A profile reaches the USB drive only through the check, but the connector watchdog does not learn about a reseat on its own and sends false alarms.">
 
-1. <Самое опасное: что может сломаться и у кого, одной-двумя фразами, с числом, если оно меняет решение.>
-2. <Второе.>
-3. <Что держится только текстом и чем это кончится.>
-4. <Что уже хорошо и держится замком (чтобы владелец знал, на что опираться).>
-5. <Что дальше: план одной строкой.>
+1. <The most dangerous thing: what can break and for whom, in one or two sentences, with a number if it changes the decision.>
+2. <The second.>
+3. <What is held by text alone, and how that will end.>
+4. <What is already good and held by a lock (so the owner knows what to rely on).>
+5. <What comes next: the plan in one line.>
 
-Главный вопрос: <одно решение, которое может принять только владелец>? Рекомендация: <что и почему>.
+The main question: <the one decision only the owner can make>? Recommendation: <what and why>.
 
-Полный отчёт: `AUDIT.md`, чертежи: `img/map.html`.
+Full report: `AUDIT.md`, diagrams: `img/map.html`.

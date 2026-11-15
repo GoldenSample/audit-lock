@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-AUDIT.md отмечает, что правило «после правки ревью заново» держится только текстом: вердикт не привязан к содержимому (sha) файла
+AUDIT.md notes that the rule "after an edit, review again" is held by text alone: the verdict is not bound to the content (sha) of the file

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Чертёж контура ИЗ ДАННЫХ карты BRANCH_MAP.json: по дорожке на каждый путь (flows[].path), узлы слева направо по порядку связей.
+"""A diagram of the pipeline drawn FROM THE DATA of the map BRANCH_MAP.json: one lane per path (flows[].path), nodes left to right in link order.
 
   python map_draw.py BRANCH_MAP.json --out img/
 
-Пишет img/map_<путь>.svg на каждый путь и img/map.html со всеми чертежами и легендой. Цвет рамки = статус станции
-(ok, weak, broken, dead), массивы пунктиром, под именем строка замков: «замков: N» или «ВНЕ ЗАМКОВ» красным.
-Чертёж не рисуется руками: что не попало в карту, того нет и на чертеже, и это видно сразу.
+Writes img/map_<path>.svg for every path and img/map.html with all the diagrams and a legend. The border color = the station's
+status (ok, weak, broken, dead), datasets are dashed, and under the name there is a locks line: "locks: N" or "OUTSIDE THE LOCKS" in red.
+The diagram is never drawn by hand: whatever did not make it into the map is not on the diagram either, and that is visible at once.
 """
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def lane_svg(title: str, flows: list[dict], nodes: dict[str, dict]) -> str:
             sx, ex = x1 + BW / 2, x2 + BW / 2
             sy, ey = (y1 + BH, y2) if y2 > y1 else (y1, y2 + BH)
         mx = (sx + ex) / 2
-        if y1 == y2 and rk.get(b, 0) - rk.get(a, 0) > 1:     # через голову соседей: дугой под рядом, чтобы не лечь на узлы
+        if y1 == y2 and rk.get(b, 0) - rk.get(a, 0) > 1:     # over the neighbors' heads: an arc under the row, so it does not lie on the nodes
             sx, sy, ex, ey = x1 + BW / 2, y1 + BH, x2 + BW / 2, y2 + BH
             dip = sy + 34
             d_attr, ly = f"M{sx},{sy} C{sx},{dip} {ex},{dip} {ex},{ey}", dip - 2
@@ -102,14 +102,14 @@ def lane_svg(title: str, flows: list[dict], nodes: dict[str, dict]) -> str:
         for i, line in enumerate(wrap(d.get("name") or n)):
             out.append(f'<text x="{x + 12}" y="{y + 22 + i * 16}" fill="{C["text"]}" font-size="13">{html.escape(line)}</text>')
         if is_arr:
-            sub, col = "массив" + ("" if d.get("in_product", True) else ", мимо продукта"), C["array"]
+            sub, col = "dataset" + ("" if d.get("in_product", True) else ", not in the product"), C["array"]
         elif d.get("external"):
-            sub, col = "внешний мир", C["grey"]
+            sub, col = "outside world", C["grey"]
         elif d.get("_missing"):
-            sub, col = "НЕТ В КАРТЕ", C["broken"]
+            sub, col = "NOT IN THE MAP", C["broken"]
         else:
             nl = len(d.get("locks") or [])
-            sub, col = (f"замков: {nl} · {d.get('status')}", C["grey"]) if nl else (f"ВНЕ ЗАМКОВ · {d.get('status')}", C["broken"])
+            sub, col = (f"locks: {nl} · {d.get('status')}", C["grey"]) if nl else (f"OUTSIDE THE LOCKS · {d.get('status')}", C["broken"])
         out.append(f'<text x="{x + 12}" y="{y + BH - 12}" fill="{col}" font-size="11" font-weight="600">{html.escape(sub)}</text>')
     out.append("</svg>")
     return "\n".join(out)
@@ -134,20 +134,20 @@ def main() -> int:
         lanes[f.get("path") or "main"].append(f)
     parts = []
     for lane, fl in lanes.items():
-        svg = lane_svg(f"{d.get('name', 'контур')}: путь «{lane}»", fl, nodes)
+        svg = lane_svg(f"{d.get('name', 'pipeline')}: path \"{lane}\"", fl, nodes)
         fn = out / ("map_" + (re.sub(r"[^\w-]+", "_", lane).strip("_") or "main") + ".svg")
         fn.write_text(svg, encoding="utf-8")
         parts.append(svg)
-        print(f"{fn}: связей {len(fl)}")
-    legend = ("<p>Рамка: <b style='color:#3fb27f'>ok</b>, <b style='color:#e0a43a'>weak</b> (держится текстом или с дырой), "
-              "<b style='color:#e5534b'>broken</b>, <b style='color:#6b7785'>dead</b>; пунктир = массив. "
-              "«ВНЕ ЗАМКОВ» = у станции нет ни одного замка на пути. Наведи на узел: опора путь:строка.</p>")
-    page = ("<!doctype html><meta charset='utf-8'><title>Карта контура</title>"
+        print(f"{fn}: links {len(fl)}")
+    legend = ("<p>Border: <b style='color:#3fb27f'>ok</b>, <b style='color:#e0a43a'>weak</b> (held by text or has a hole), "
+              "<b style='color:#e5534b'>broken</b>, <b style='color:#6b7785'>dead</b>; dashed = dataset. "
+              "OUTSIDE THE LOCKS = the station has no lock on the path at all. Hover over a node for its support (path:line).</p>")
+    page = ("<!doctype html><meta charset='utf-8'><title>Pipeline map</title>"
             f"<body style='background:{C['bg']};color:{C['text']};color-scheme:dark;font-family:system-ui,sans-serif;padding:16px'>"
-            f"<h1 style='font-size:20px'>{html.escape(d.get('name', 'контур'))}</h1>{legend}"
+            f"<h1 style='font-size:20px'>{html.escape(d.get('name', 'pipeline'))}</h1>{legend}"
             + "".join(f"<div style='overflow-x:auto;margin:16px 0'>{p}</div>" for p in parts) + "</body>")
     (out / "map.html").write_text(page, encoding="utf-8")
-    print(f"{out / 'map.html'}: чертежей {len(parts)}")
+    print(f"{out / 'map.html'}: diagrams {len(parts)}")
     return 0
 
 

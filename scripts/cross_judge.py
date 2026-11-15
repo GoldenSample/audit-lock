@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Заверение другой моделью: промпт из файла уходит в OpenAI-совместимый эндпоинт, ответ сохраняется дословно.
+"""Review by a different model: a prompt from a file goes to an OpenAI-compatible endpoint, and the answer is saved verbatim.
 
-  python cross_judge.py ПРОМПТ.md --out ОТВЕТ.md --url https://.../v1/chat/completions --model ИМЯ [--key-env ИМЯ_ПЕРЕМЕННОЙ]
-      [--system "ты заверитель аудита..."] [--timeout 900]
+  python cross_judge.py PROMPT.md --out ANSWER.md --url https://.../v1/chat/completions --model NAME [--key-env VARIABLE_NAME]
+      [--system "you are an audit reviewer..."] [--timeout 900]
 
-Ключ берётся только из переменной окружения (--key-env, по умолчанию JUDGE_API_KEY), в файлы и argv не пишется.
-Промпт читается из файла (кириллица в аргументах командной строки на некоторых системах бьётся). Температура и прочие
-параметры не передаются: модель отвечает на своих умолчаниях. В файл ответа идут модель, время и текст без правок.
-Смысл: свой вывод модель находит убедительным по построению, поэтому список «вне замков» заверяет модель другого семейства.
+The key is taken only from an environment variable (--key-env, JUDGE_API_KEY by default); it is never written to files or argv.
+The prompt is read from a file (non-ASCII text in command-line arguments gets mangled on some systems). Temperature and other
+parameters are not sent: the model answers on its defaults. The answer file holds the model, the time and the unedited text.
+The point: a model finds its own output convincing by construction, so the "outside the locks" list is reviewed by a model
+from a different family.
 """
 from __future__ import annotations
 
@@ -32,8 +33,8 @@ def main() -> int:
     ap.add_argument("--url", required=True)
     ap.add_argument("--model", required=True)
     ap.add_argument("--key-env", default="JUDGE_API_KEY")
-    ap.add_argument("--system", default="Ты независимый заверитель аудита. Спорь по существу, опирайся только на то, что дано, "
-                                        "пиши, где довод слабый и что закрыть первым.")
+    ap.add_argument("--system", default="You are an independent reviewer of an audit. Argue on the substance, rely only on what "
+                                        "is given, and say where the reasoning is weak and what to close first.")
     ap.add_argument("--timeout", type=int, default=900)
     a = ap.parse_args()
     text = Path(a.prompt).read_text(encoding="utf-8")
@@ -44,19 +45,21 @@ def main() -> int:
         headers["Authorization"] = "Bearer " + key
     req = urllib.request.Request(a.url, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), headers=headers)
     t0 = dt.datetime.now(dt.timezone.utc)
+    ok = False
     try:
         with urllib.request.urlopen(req, timeout=a.timeout) as r:
             j = json.loads(r.read().decode("utf-8"))
         answer = j["choices"][0]["message"]["content"]
         served = j.get("model", a.model)
-        status = "ответ получен"
+        status = "answer received"
+        ok = True
     except Exception as e:  # noqa: BLE001
-        answer, served, status = f"ОШИБКА: {type(e).__name__}: {e}", a.model, "ошибка"
+        answer, served, status = f"ERROR: {type(e).__name__}: {e}", a.model, "error"
     sec = (dt.datetime.now(dt.timezone.utc) - t0).total_seconds()
-    Path(a.out).write_text(f"# Заверение: {served}, {t0.isoformat(timespec='seconds')}, {sec:.0f} с, {status}\n\n"
-                           f"Промпт: {a.prompt}\n\n{answer}\n", encoding="utf-8")
-    print(f"{status}: {a.out} ({len(answer)} знаков, {sec:.0f} с, модель {served})")
-    return 0 if status == "ответ получен" else 1
+    Path(a.out).write_text(f"# Cross-model review: {served}, {t0.isoformat(timespec='seconds')}, {sec:.0f} s, {status}\n\n"
+                           f"Prompt: {a.prompt}\n\n{answer}\n", encoding="utf-8")
+    print(f"{status}: {a.out} ({len(answer)} characters, {sec:.0f} s, model {served})")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

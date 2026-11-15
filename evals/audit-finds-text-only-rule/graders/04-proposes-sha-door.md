@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-План правок в AUDIT.md предлагает единственную дверь выпуска с вердиктом, привязанным к sha256 файла, и закрытие боковой двери hotfix хуком или удалением
+The fix plan in AUDIT.md proposes a single release door with a verdict bound to the file's sha256, and closing the hotfix side door with a hook or by removing it

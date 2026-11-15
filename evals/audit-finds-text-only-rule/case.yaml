@@ -3,8 +3,8 @@ name: audit-finds-text-only-rule
 context:
   scaffold_script: place-files.sh
 expected_outcome: |
-  AUDIT.md с опорой путь:строка находит три вещи: цель hotfix в Makefile копирует прошивку в dist мимо release.py;
-  release.py проверяет поле approved, которое заполняет сам build.py (проверка бумаги, ревьюер = автор);
-  правило «после правки ревью заново» нигде не держится, вердикт не привязан к содержимому файла.
-  Предложен замок: единственная дверь выпуска с вердиктом по sha256 и хук или проверка на боковую дверь.
-  SUMMARY.md начинается со смысла одной фразой и заканчивается одним вопросом с рекомендацией. Код репо не изменён.
+  AUDIT.md, with path:line support, finds three things: the hotfix target in the Makefile copies the firmware to dist around release.py;
+  release.py checks the approved field, which build.py fills in itself (a paperwork check, reviewer = author);
+  the rule "after an edit, review again" is held nowhere, and the verdict is not bound to the file's content.
+  A lock is proposed: a single release door with a verdict bound to the sha256, and a hook or check on the side door.
+  SUMMARY.md starts with the point in one sentence and ends with one question with a recommendation. The repo's code is unchanged.

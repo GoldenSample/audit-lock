@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-Выпуск отказывает, когда судья (ревьюер) совпадает с автором сборки, и это показано прогоном
+The release refuses when the judge (reviewer) is the same as the author of the build, and this is shown by a run

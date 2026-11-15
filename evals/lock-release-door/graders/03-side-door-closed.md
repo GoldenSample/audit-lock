@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-Цель hotfix больше не копирует в dist мимо двери выпуска, либо на неё стоит хук или проверка с отказом; показан прогон
+The hotfix target no longer copies into dist around the release door, or a hook or check with a refusal stands on it; a run is shown

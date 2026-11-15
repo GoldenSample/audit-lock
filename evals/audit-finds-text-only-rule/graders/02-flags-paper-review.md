@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-AUDIT.md отмечает, что release.py проверяет поле approved из review.json, которое пишет сам build.py, то есть проверка бумаги, а ревьюер совпадает с автором
+AUDIT.md notes that release.py checks the approved field from review.json, which build.py writes itself, so this is a paperwork check, and the reviewer is the same as the author

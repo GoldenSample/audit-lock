@@ -1,82 +1,82 @@
-# Замки: типы, обходы, правила постройки
+# Locks: types, bypasses, building rules
 
-Содержание: 1. Матрица: какой замок на какой закон. 2. Восемь типов замков. 3. Каталог обходов (что тестировать). 4. Правила постройки. 5. Как понять, что замок проверяет бумагу.
+Contents: 1. The matrix: which lock for which law. 2. Eight types of locks. 3. The catalog of bypasses (what to test). 4. Building rules. 5. How to tell that a lock checks paperwork.
 
-## 1. Матрица
+## 1. The matrix
 
-| Закон звучит так | Замок | Почему этот |
+| The law sounds like this | The lock | Why this one |
 |---|---|---|
-| «выпускать только проверенное» (на флешку, на площадку, в канал, в прод) | единственная дверь выпуска + вердикт по sha + хук на остальные двери | проверка привязана к содержимому, копия сверяется после записи |
-| «не звать модель/API без X» (без манифеста, без лимита, без билета) | замок внутри обёртки вызова (guard до HTTP) + хук на прямые вызовы | любой скрипт, идущий через обёртку, заперт без исключений |
-| «сначала прочитай скил/массив, потом делай» | хук: производственное действие запрещено, пока в журнале сессии нет полного чтения; после сжатия контекста счёт заново | напоминание не работает, работает только отказ на действии |
-| «план до результата», «карта до рендера» | печать: план пишет sha и время в журнал, выпуск отказывает, если печать моложе результата или sha не совпал | ретро-подпись ловится по времени и хэшу |
-| «одобрено владельцем» | подпись = цитата в «», найденная машиной в его сообщениях после печати | поле, заполненное исполнителем, ничего не стоит |
-| «одна модель на карту», «не трогать чужой процесс» | слот: файл аренды с O_EXCL, владелец = имя + pid, срок аренды, хук на прямые порты | гонки и молчаливые захваты видны по имени держателя |
-| «не убивать службы», «не менять лимиты» | хук: команды против перечня защищённых имён, один разрешённый инструмент | действие необратимое, отказ дешевле разбора |
-| «норма сравнения должна быть свежей» | событие сброса нормы пишется в журнал; сторож сам предлагает сброс после разрыва питания или пересадки | иначе ложные тревоги приучают их игнорировать |
+| "release only what has been checked" (to a USB drive, a platform, a channel, production) | a single release door + a verdict bound to the sha + a hook on the other doors | the check is tied to the content, and the copy is compared after the write |
+| "do not call the model/API without X" (without a manifest, a limit, a ticket) | a lock inside the call wrapper (a guard before HTTP) + a hook on direct calls | any script that goes through the wrapper is locked, with no exceptions |
+| "read the skill/dataset first, then act" | a hook: a production action is forbidden until the session log shows a full read; after context compaction the count starts over | a reminder does not work; only a refusal on the action does |
+| "the plan before the result", "the map before the render" | a seal: the plan writes its sha and time into a log, and the release refuses if the seal is younger than the result or the sha does not match | a retroactive signature is caught by time and hash |
+| "approved by the owner" | sign-off is a quoted text that the machine finds in the owner's messages after the seal | a field filled in by the executor is worth nothing |
+| "one model per card", "do not touch someone else's process" | a slot: a lease file with O_EXCL, holder = name + pid, a lease term, a hook on direct ports | races and silent takeovers show up by the holder's name |
+| "do not kill services", "do not change limits" | a hook: commands against a list of protected names, one permitted tool | the action is irreversible, and a refusal is cheaper than the post-mortem |
+| "the comparison baseline must be fresh" | the baseline reset event is written to the log; the watchdog itself proposes a reset after a power break or a reseat | otherwise false alarms teach people to ignore them |
 
-## 2. Восемь типов замков
+## 2. Eight types of locks
 
-**2.1 Замок внутри вызова.** Обёртка, через которую обязан идти вызов (модель, API, запись на устройство). Проверка до действия: нет условия = исключение, запрос не уходит. Пример: `guard()` до HTTP с оценкой цены, `check(profile, sheet)` внутри `save()`. Сильное место: ловит любую дверь, идущую через код. Слабое: не видит путей мимо кода, их закрывает хук.
+**2.1 A lock inside the call.** A wrapper that the call (to a model, an API, a device write) has to go through. The check comes before the action: no condition met means an exception, and the request does not leave. Example: `guard()` before HTTP with a cost estimate, `check(profile, sheet)` inside `save()`. Strength: it catches every door that goes through the code. Weakness: it does not see the paths around the code; the hook closes those.
 
-**2.2 Единственная дверь выпуска.** Один инструмент копирует продукт туда, где его потребляют, и делает это только с вердиктом, у которого `sha256` совпадает с файлом, судья реально отработал (не «без судьи»), вердикт из разрешённого набора, судья не тот, кто делал. После копии хэш копии сверяется, строка пишется в журнал выпусков. Заготовка: `scripts/release_gate.py`.
+**2.2 A single release door.** One tool copies the product to the place where it is consumed, and it does so only with a verdict whose `sha256` matches the file, where the judge really ran (not "no judge"), the verdict is from the permitted set, and the judge is not the one who did the work. After the copy, the hash of the copy is compared and a line is written to the release log. Starter: `scripts/release_gate.py`.
 
-**2.3 Хук на боковые двери.** PreToolUse в харнесе агента: команда или запись, которая кладёт продукт в защищённое место любым другим способом, получает отказ с текстом «путь один: <инструмент>». Разбор посегментно (`;`, `&&`, `|`, перевод строки), чтение не производство, `cd` внутри команды меняет папку для следующих сегментов. Заготовка: `scripts/guard_hook.py`. Регулярка ловит известные двери, поэтому хук страховка, а замок 2.2.
+**2.3 A hook on the side doors.** PreToolUse in the agent harness: a command or a write that puts the product into a protected place by any other means gets a refusal with the text "there is one path: <tool>". Parsing is per segment (`;`, `&&`, `|`, newline); a read is not production; a `cd` inside the command changes the folder for the segments that follow. Starter: `scripts/guard_hook.py`. A regex catches the known doors, so the hook is the backstop and the lock is 2.2.
 
-**2.4 Печать и билет.** Шаг, после которого вход нельзя менять, пишет билет: sha входа, sha манифеста, время с микросекундами. Следующий шаг шлёт ровно тот текст, чей sha в билете, и отказывает при расхождении. Так «проверили одно, отправили другое» становится невозможным.
+**2.4 A seal and a ticket.** The step after which the input must not change writes a ticket: the sha of the input, the sha of the manifest, the time with microseconds. The next step sends exactly the text whose sha is in the ticket and refuses on a mismatch. This makes "checked one thing, sent another" impossible.
 
-**2.5 Подпись цитатой.** Поля «одобрено», «снято владельцем», «вердикт владельца» принимают только текст с цитатой в «». Машина ищет цитату в его сообщениях из стенограмм (только человеческие реплики, без вставок, отзывов хуков и текста скилов), не раньше времени печати. Короткие «да», «ок» засчитываются, только если это вся реплика. Заготовка: `scripts/owner_words.py said`.
+**2.5 Sign-off by quote.** The fields "approved", "lifted by the owner" and "owner's verdict" accept only text that carries a quotation. The machine looks for the quote in the owner's messages from the transcripts (human lines only, without pasted text, hook feedback or skill text), no earlier than the time of the seal. A short "yes" or "ok" counts only if it is the whole message. Starter: `scripts/owner_words.py said`.
 
-**2.6 Снятие замка словом.** Владелец может снять замок («без гейта»): снятие действует ограниченное время или на одну задачу, проверяется цитатой, пишется в журнал снятий. Переменная окружения вида `GATE=off` ставит метку «замок выключен» и пишет журнал, но выдачу не открывает.
+**2.6 Lifting a lock by word.** The owner can lift a lock ("no gate"): the lift is valid for a limited time or for one task, is verified by a quote and is written to the lift log. An environment variable such as `GATE=off` sets the mark "lock disabled" and writes to the log, but does not open the release.
 
-**2.7 Слот общего ресурса.** Один файл аренды вне виртуализированных папок (песочницы приложений бывают невидимы для служб), захват `O_EXCL` со сверкой nonce, владелец = имя + pid, вложенный вход по переменной окружения, срок аренды. Хук запрещает прямые обращения к порту ресурса при чужом слоте.
+**2.7 A shared-resource slot.** One lease file outside virtualized folders (application sandboxes can be invisible to services), acquisition with `O_EXCL` and a nonce check, holder = name + pid, nested entry through an environment variable, a lease term. A hook forbids direct access to the resource's port while someone else holds the slot.
 
-**2.8 Сторож с событием нормы.** Если сторож сравнивает с нормой (доли тока по проводам, скорость модели, размер дампа), у нормы есть дата и событие, которое её сбрасывает. Разрыв в журнале дольше N часов или явная пересадка = сторож пишет «норма устарела, сбросить?» вместо тревог по старой норме. Сброс пишется строкой в журнал с причиной.
+**2.8 A watchdog with a baseline event.** If a watchdog compares against a baseline (current shares across wires, model speed, dump size), the baseline has a date and an event that resets it. A gap in the log longer than N hours or an explicit reseat means the watchdog writes "the baseline is stale, reset it?" instead of raising alarms against the old baseline. A reset is written as a log line with its reason.
 
-## 3. Каталог обходов: что тестировать
+## 3. The catalog of bypasses: what to test
 
-Каждая строка = тест-кейс для `scripts/test_hook.py` (базовый набор в `assets/bypass_cases.example.json`). Ожидание по каждому: законный путь проходит, обход получает отказ или ловится замком 2.2 на выходе.
+Each line is a test case for `scripts/test_hook.py` (the base set is in `assets/bypass_cases.example.json`). The expectation for each: the legitimate path passes, and the bypass is refused or is caught by lock 2.2 at the exit.
 
-Команды оболочки:
+Shell commands:
 - `cp`, `mv`, `copy`, `move`, `xcopy`, `robocopy`, `rsync`, `scp`, PowerShell `Copy-Item`, `Move-Item`, `Set-Content`, `Out-File`.
-- Перенаправление `>` и `>>`, `tee`, heredoc `cat > файл <<EOF`.
-- Встроенный код: `python -c "open(...,'w')"`, `shutil.copy`, `write_bytes`, `node -e "fs.writeFileSync(...)"`.
-- Пути: относительный путь после `cd`, другой регистр букв, обратные и прямые слэши, `\\?\` длинные пути, переменная `$d`, буква диска через `subst`, симлинк или junction на защищённую папку.
-- Разбиение: защищённый путь в кавычках, склейка строк, команда в base64 (`powershell -EncodedCommand`, `base64 -d | sh`).
-- Два шага: записать скрипт в безобидное место, во втором вызове запустить `python script.py`. Хук на команде видит только запуск. Ловит только замок на выходе (2.2) или проверка содержимого у потребителя.
-- Отложенный запуск: планировщик задач, cron, `at`, служба. Хук сейчас пропустит, действие случится без агента.
+- Redirection with `>` and `>>`, `tee`, a heredoc `cat > file <<EOF`.
+- Inline code: `python -c "open(...,'w')"`, `shutil.copy`, `write_bytes`, `node -e "fs.writeFileSync(...)"`.
+- Paths: a relative path after `cd`, different letter case, backslashes and forward slashes, `\\?\` long paths, a variable `$d`, a drive letter through `subst`, a symlink or junction to the protected folder.
+- Splitting: the protected path in quotes, string concatenation, a base64 command (`powershell -EncodedCommand`, `base64 -d | sh`).
+- Two steps: write a script to a harmless place, then run `python script.py` in a second call. A hook on the command sees only the launch. Only a lock at the exit (2.2) or a content check on the consumer's side catches this.
+- Deferred launch: the task scheduler, cron, `at`, a service. The hook lets it through now, and the action happens without the agent.
 
-Инструменты агента помимо оболочки:
-- Запись файлов инструментом (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`) прямо в защищённую папку.
-- Браузер и компьютерное управление: загрузка файла через `file_upload`, пакет действий браузера, управление экраном, встроенный терминал приложения.
-- Другой CLI к той же модели или API, прямой HTTP (`curl`, `Invoke-WebRequest`, `urllib`).
-- Субагенты: их вызовы тоже должны проходить хук, проверь, что регистрация это покрывает.
-- Правка самого хука, его регистрации или файлов состояния.
+Agent tools other than the shell:
+- A file write by a tool (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`) straight into the protected folder.
+- The browser and computer control: a file upload through `file_upload`, a batch of browser actions, screen control, an application's built-in terminal.
+- A different CLI to the same model or API, direct HTTP (`curl`, `Invoke-WebRequest`, `urllib`).
+- Subagents: their calls must go through the hook too; check that the registration covers this.
+- Editing the hook itself, its registration or its state files.
 
-Подделка бумаги:
-- Поле `approved: true`, вердикт, дописанный руками, вердикт от другого файла с тем же именем.
-- Проверенный файл подменён после проверки (TOCTOU): ловит сверка sha в момент выпуска и после копии.
-- Перекодированная или переименованная копия проверенного файла.
-- Печать плана, поставленная после результата.
+Forged paperwork:
+- An `approved: true` field, a verdict filled in by hand, a verdict from a different file with the same name.
+- The checked file swapped after the check (TOCTOU): caught by comparing the sha at the moment of release and after the copy.
+- A re-encoded or renamed copy of the checked file.
+- A plan seal applied after the result.
 
-## 4. Правила постройки
+## 4. Building rules
 
-1. Отказ всегда объясняет путь: что запрещено, какой путь разрешён, что прочитать, кто может снять.
-2. Хук всегда завершается кодом 0 и отдаёт отказ структурой (`permissionDecision: deny`), а не падением. Падение хука в некоторых харнесах = молчаливый пропуск.
-3. На производственном действии ошибка разбора = отказ. На остальном = пропуск с печатью в журнал.
-4. `HOOK_SMOKE=1` (или аналог) = хук ничего не пишет, для тестов и CI.
-5. Хук не зовёт модель синхронно на каждом вызове. Судья работает в фоне, его вердикт приходит в контекст, хук сверяет только готовый вердикт.
-6. Состояние хука в отдельной папке, запись туда инструментами агента запрещена самим хуком.
-7. Тесты хука запускаются в тех же условиях, что в харнесе (та же кодировка вывода, тот же интерпретатор). Хук, который в тесте пишет в другой кодировке, в тесте «работает», а в бою молчит.
-8. После правки хуков прогон всех тестов хуков, не только своего.
-9. Каждый замок стоит перед историческим браком: старый плохой файл получает отказ, эталон проходит.
-10. Пункт, где замок не ставится, получает довод с проверкой: команда и её вывод, почему здесь не нужно.
+1. A refusal always explains the path: what is forbidden, which path is permitted, what to read, who can lift it.
+2. A hook always exits with code 0 and returns the refusal as a structure (`permissionDecision: deny`), not by crashing. In some harnesses a crashed hook is a silent pass.
+3. On a production action a parse error means a refusal. On everything else it means a pass with a line in the log.
+4. `HOOK_SMOKE=1` (or an equivalent) means the hook writes nothing; this is for tests and CI.
+5. A hook does not call a model synchronously on every call. The judge works in the background, its verdict arrives in the context, and the hook only compares a ready verdict.
+6. The hook's state lives in a separate folder, and the hook itself forbids the agent's tools from writing there.
+7. Hook tests run under the same conditions as in the harness (the same output encoding, the same interpreter). A hook that writes in a different encoding under test "works" in the test and stays silent in the field.
+8. After editing hooks, run all hook tests, not only your own.
+9. Every lock faces the historical defect: the old bad file is refused, and the reference sample passes.
+10. An item where no lock is added gets a reason with a check: a command and its output showing why it is not needed here.
 
-## 5. Как понять, что замок проверяет бумагу
+## 5. How to tell that a lock checks paperwork
 
-Задай про каждый замок три вопроса:
-1. Кто пишет то, что замок читает? Если исполнитель, замок проверяет бумагу.
-2. Привязана ли проверка к содержимому (sha, распознанный текст, счёт) или к имени и полю?
-3. Есть ли путь доставить продукт к потребителю, не пройдя этот замок? Перечисли двери из раздела 3 и найди тест на каждую.
+Ask three questions about every lock:
+1. Who writes what the lock reads? If it is the executor, the lock checks paperwork.
+2. Is the check tied to the content (a sha, recognized text, a count) or to a name and a field?
+3. Is there a way to deliver the product to the consumer without passing this lock? List the doors from section 3 and find a test for each.
 
-Если хоть один ответ плохой, замок переводится в тип 2.2 или 2.4, а поле исполнителя в подпись цитатой.
+If even one answer is bad, the lock is converted to type 2.2 or 2.4, and the executor's field becomes a sign-off by quote.

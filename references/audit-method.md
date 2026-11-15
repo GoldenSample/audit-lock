@@ -1,144 +1,144 @@
-# Метод аудита: роли, брифы, форматы
+# The audit method: roles, briefs, formats
 
-Содержание: 1. Папка аудита. 2. Опись участков. 3. Брифы ролей (чтец участка, чтец слов, путь модели, путь пользователя, проверяющий, заверение, сборщик, рецензенты). 4. Схема карты. 5. Цена и запуск веера. 6. Типичные провалы аудита.
+Contents: 1. The audit folder. 2. Inventory of sections. 3. Role briefs (section reader, reader of the owner's words, the model's path, the user's path, verifier, cross-model review, assembler, reviewers). 4. The map schema. 5. Cost and launching a fan-out. 6. Typical audit failures.
 
-## 1. Папка аудита
-
-```
-<аудит>/
-  SCOPE.md            слово владельца дословно, принцип, участки, законы аудита
-  STATE.md            где стоим (на случай сжатия контекста): запуск, run id, что собрано
-  words/              корпус слов владельца (owner_words.py collect)
-  parts/              отчёты ролей: <участок>.md, W_WORDS.md, MODEL_PATH.md, USER_PATH.md, VERIFY.md, CROSS_ATTEST.md
-  BRANCH_MAP.json     карта контура
-  img/                чертежи из карты (map_draw.py)
-  AUDIT.md            сводный отчёт
-  SUMMARY.md          выжимка владельцу
-```
-
-`STATE.md` пиши сразу после запуска веера и обновляй на каждом этапе. Если контекст сожмётся или веер упадёт на лимите, по нему продолжают с места, а не с нуля.
-
-## 2. Опись участков
-
-Участок = кусок контура, у которого есть свой продукт и свой потребитель. Примеры: «сборка профиля и выпуск на флешку», «сайт: логика подбора», «сайт: страницы и выкладка», «сторожа железа», «базы знаний». Папки и языки не повод резать участки: один участок может жить в трёх папках.
-
-Для каждого участка в `SCOPE.md`: пути (код, данные, журналы, скилы, документы), состояние на сегодня из памяти и хендофов (сверять с диском), известные хвосты прошлых аудитов.
-
-Законы аудита в `SCOPE.md` пишутся один раз и действуют для всех ролей:
-1. Только чтение, писать можно только свой файл в `parts/`.
-2. Что нельзя трогать физически: прод, выкладку, флешки и съёмные диски, службы, журналы на запись (sqlite открывать `file:...?mode=ro`), видеокарту, генерации, платные вызовы, кроме тех, что поручены роли.
-3. Опора на каждое утверждение, «не нашёл» прямо.
-4. Барьер чтения: что агентам не читать (личное, секреты, промпты и баллы судей, если писатель и судья должны быть разделены).
-5. Пароли и ключи не выписывать, только факт «ключ лежит в коде, путь:строка».
-6. Язык и стиль отчётов.
-
-## 3. Брифы ролей
-
-Бриф начинается со ссылки на `SCOPE.md`: «прочитай целиком, нарушение законов = провал». Остальное ниже. Гипотезу аудитора в бриф не клади, клади пути и вопросы. Агент, которому дали вывод, возвращает его подтверждённым.
-
-### Чтец участка
+## 1. The audit folder
 
 ```
-ТВОЙ УЧАСТОК <id>: <имя>. Пути в SCOPE.md, строка <id>.
-Проверь: <5-10 конкретных вопросов участка: где может врать формула, где путь выпуска, какие двери, какие старые пункты>.
-Отчёт: <аудит>/parts/<id>.md, разделы:
-## Опись: станции (скрипты, шаги) и массивы (базы, таблицы, журналы); что реально идёт в продукт, что мёртвый груз или дубль
-## Проблемы прода: id, тяжесть (высокая / средняя / низкая), что сломано или сломается, опора путь:строка или команда с выводом, сценарий сбоя у потребителя, починка одной фразой
-## Вне замков: закон или просьба владельца (дата) -> где держится (замок на пути, проверка в коде, тест / только текст / нигде) -> почему и чем грозит
-## Пункты прошлого аудита: статус сейчас с опорой
-## Что проверено машинно: команды и итог
-Верни также структурный список находок (id, тяжесть, заголовок, опора, починка) и список «вне замков».
+<audit>/
+  SCOPE.md            the owner's word verbatim, the principle, the sections, the laws of the audit
+  STATE.md            where we stand (in case of context compaction): launch, run id, what has been collected
+  words/              the corpus of the owner's words (owner_words.py collect)
+  parts/              role reports: <section>.md, W_WORDS.md, MODEL_PATH.md, USER_PATH.md, VERIFY.md, CROSS_ATTEST.md
+  BRANCH_MAP.json     the pipeline map
+  img/                diagrams drawn from the map (map_draw.py)
+  AUDIT.md            the consolidated report
+  SUMMARY.md          the summary for the owner
 ```
 
-Вопросы участка пишет аудитор, который уже посмотрел опись. Хороший вопрос называет механизм: «привязан ли вердикт к sha файла или к имени», «что будет, если тип поля число, а не список», «покрывает ли лист решений все поля, которые пишет сборщик». Плохой вопрос: «проверь качество кода».
+Write `STATE.md` right after launching the fan-out and update it at every stage. If the context gets compacted or the fan-out dies on a usage limit, work resumes from that file and not from zero.
 
-### Чтец слов владельца
+## 2. Inventory of sections
 
-Читает корпус целиком (кусками, с заметками). Выход `parts/W_WORDS.md`:
-- «Законы и просьбы»: дата, цитата до 25 слов, что требует.
-- «Вне замков»: для каждого закона, где он держится сейчас (`путь:строка` замка или «только текст: файл скила или памяти» или «нигде»).
-- «Противоречия»: где слова владельца спорят с кодом, скилом, памятью. Отдельно отменённые решения, по которым код живёт до сих пор.
-- «Просьбы без исполнения»: просил, а в коде нет.
+A section is a piece of the pipeline that has its own product and its own consumer. Examples: "building a profile and releasing it to a USB drive", "website: selection logic", "website: pages and deployment", "hardware watchdogs", "knowledge bases". Folders and languages are no reason to cut sections: one section can live in three folders.
 
-Вставки чужого текста в сообщениях владельца (логи, чужие посты, ответы ботов) не его слова: `owner_words.py` вырезает блоки `<pasted_content>` и помечает такие реплики.
+For each section, `SCOPE.md` holds: the paths (code, data, logs, skills, documents), the state today according to memory and handoff notes (verify against the disk), and the known loose ends of past audits.
 
-### Путь модели
+The laws of the audit are written in `SCOPE.md` once and apply to every role:
+1. Read only; the only thing a role may write is its own file in `parts/`.
+2. What must not be physically touched: production, deployment, USB drives and removable disks, services, logs opened for writing (open sqlite as `file:...?mode=ro`), the graphics card, generations, paid calls, except those assigned to the role.
+3. Support for every claim; "not found" stated plainly.
+4. The reading barrier: what the agents must not read (personal material, secrets, the judges' prompts and scores when the writer and the judge have to stay separated).
+5. Do not copy out passwords and keys, only the fact: "a key sits in the code, path:line".
+6. The language and style of the reports.
 
-Как исполнитель проходит хуки контура. Метод: собрать 10-30 образцовых вызовов инструментов (JSON `tool_name`, `tool_input`), включая законный путь и обходы, прогнать каждый хук через `scripts/test_hook.py` и записать, где хук молчит на опасном действии и где запирает безвредное. Плюс разбор регистрации: на каких событиях и инструментах хук стоит (`settings.json`), какие инструменты не покрыты вовсе (MCP, браузер, терминал, субагенты).
+## 3. Role briefs
 
-### Путь пользователя
+A brief starts with a pointer to `SCOPE.md`: "read it in full; breaking the laws means failure". The rest is below. Do not put the auditor's hypothesis into the brief; put paths and questions. An agent that is handed a conclusion returns it confirmed.
 
-Пройти путь потребителя продукта от входа до результата: посетитель сайта (главная, мастер, подбор, проверка, ссылки), зритель (первые секунды, петля, призыв, ссылки), оператор железа (профиль, выпуск, загрузка, тест, снимок). Где он уходит, где получает брак, где продукт отличается от проверенного. Живые сервисы только чтением.
-
-### Проверяющий
+### Section reader
 
 ```
-Ниже сводка находок всех чтецов (JSON) и пути к их отчётам.
-1) Каждую находку тяжести высокая и средняя перепроверь сам с диска, своими командами, с позиции скептика: сначала попытайся опровергнуть.
-   Вердикт ПОДТВЕРЖДЕНО / ЧАСТИЧНО / ОПРОВЕРГНУТО / НЕ ПРОВЕРЕНО с твоей опорой. Низкие выборочно, не меньше трети. Дубли сведи.
-2) Собери список «вне замков» в файл-промпт и отдай модели другого семейства (cross_judge.py). Ответ дословно в parts/CROSS_ATTEST.md.
-3) Отчёт parts/VERIFY.md: по каждой находке строка с вердиктом и опорой; дубли; с чем спорит заверитель.
+YOUR SECTION <id>: <name>. Paths are in SCOPE.md, line <id>.
+Check: <5-10 concrete questions about the section: where a formula may lie, where the release path is, which doors exist, which old items remain>.
+Report: <audit>/parts/<id>.md, sections:
+## Inventory: stations (scripts, steps) and datasets (databases, tables, logs); what really goes into the product, what is dead weight or a duplicate
+## Production problems: id, severity (high / medium / low), what is broken or will break, support as path:line or a command with its output, the failure scenario for the consumer, the fix in one sentence
+## Outside the locks: the owner's law or request (date) -> where it is held (a lock on the path, a check in the code, a test / text only / nowhere) -> why, and what it threatens
+## Items from the previous audit: status now, with support
+## What was checked by machine: commands and results
+Also return a structured list of findings (id, severity, title, support, fix) and the "outside the locks" list.
 ```
 
-На большом аудите проверяющих несколько, по участку каждому, плюс по три скептика на каждую высокую находку (опровергнуто большинством = снять).
+The section's questions are written by the auditor, who has already looked at the inventory. A good question names a mechanism: "is the verdict bound to the file's sha or to its name", "what happens if the field's type is a number and not a list", "does the decision sheet cover every field the builder writes". A bad question: "check the code quality".
 
-### Заверение другой моделью
+### Reader of the owner's words
 
-Промпт заверителю: контекст контура одним абзацем; список «закон, где держится, почему нет замка»; вопросы: (а) убедителен ли довод по каждому пункту; (б) какие пять пунктов закрыть первыми и каким замком (внутри вызова, единственная дверь, хук, печать, подпись, слот); (в) чего в списке не хватает. Ответ хранится дословно, сборщик спорит с ним по существу, а не пересказывает.
+Reads the whole corpus (in chunks, taking notes). Output `parts/W_WORDS.md`:
+- "Laws and requests": date, a quote of up to 25 words, what it demands.
+- "Outside the locks": for each law, where it is held now (the `path:line` of the lock, or "text only: the skill or memory file", or "nowhere").
+- "Contradictions": where the owner's words disagree with the code, a skill or memory. Separately, cancelled decisions that the code still lives by.
+- "Requests never carried out": asked for, but not in the code.
 
-### Сборщик
+Other people's text pasted into the owner's messages (logs, someone else's posts, bot replies) is not the owner's words: `owner_words.py` cuts out `<pasted_content>` blocks and marks such lines.
 
-Читает `SCOPE.md`, все `parts/`, вердикты проверяющего и заверение. Пишет:
-1. `BRANCH_MAP.json` по схеме раздела 4, гоняет `map_check.py`, вывод кладёт в отчёт.
-2. `AUDIT.md` по `assets/AUDIT.template.md`.
-3. `SUMMARY.md` по `assets/SUMMARY.template.md`.
+### The model's path
 
-В проблемы прода идут только ПОДТВЕРЖДЕНО и ЧАСТИЧНО. НЕ ПРОВЕРЕНО отдельным списком, ОПРОВЕРГНУТО одной строкой в конце.
+How the executor gets through the pipeline's hooks. The method: collect 10 to 30 sample tool calls (JSON `tool_name`, `tool_input`), including the legitimate path and the bypasses, run each hook through `scripts/test_hook.py`, and record where the hook stays silent on a dangerous action and where it locks a harmless one. Plus a review of the registration: which events and tools the hook is attached to (`settings.json`), and which tools are not covered at all (MCP, the browser, the terminal, subagents).
 
-### Рецензенты (большой аудит)
+### The user's path
 
-Двое независимых читают готовый `AUDIT.md` против `parts/` и диска: что в отчёте без опоры, что из `parts/` потерялось, где план правок не проверяем. Сборщик правит по замечаниям, вторая редакция идёт владельцу.
+Walk the path of the product's consumer from entry to result: a site visitor (home page, wizard, selection, checkout, links), a viewer (the first seconds, the loop, the call to action, the links), a hardware operator (profile, release, boot, test, snapshot). Where they leave, where they receive a defect, where the product differs from what was checked. Live services are read only.
 
-## 4. Схема карты `BRANCH_MAP.json`
+### Verifier
+
+```
+Below is a digest of all the readers' findings (JSON) and the paths to their reports.
+1) Re-check every finding of high and medium severity yourself, from disk, with your own commands, from a skeptic's position: try to refute it first.
+   Verdict CONFIRMED / PARTIAL / REFUTED / NOT CHECKED, with your own support. Low findings are sampled, at least a third. Merge duplicates.
+2) Put the "outside the locks" list into a prompt file and hand it to a model from a different family (cross_judge.py). The answer goes verbatim into parts/CROSS_ATTEST.md.
+3) Report parts/VERIFY.md: one line per finding with the verdict and the support; the duplicates; where the cross-model reviewer disagrees.
+```
+
+On a large audit there are several verifiers, one per section, plus three skeptics on every high finding (refuted by a majority means dropped).
+
+### Review by a different model
+
+The prompt for the reviewer: the context of the pipeline in one paragraph; the list of "law, where it is held, why there is no lock"; the questions: (a) is the reasoning convincing for each item; (b) which five items should be closed first, and with which lock (inside the call, single door, hook, seal, sign-off, slot); (c) what is missing from the list. The answer is stored verbatim, and the assembler argues with it on the substance and does not retell it.
+
+### Assembler
+
+Reads `SCOPE.md`, everything in `parts/`, the verifier's verdicts and the cross-model review. Writes:
+1. `BRANCH_MAP.json` following the schema in section 4, runs `map_check.py` and puts the output into the report.
+2. `AUDIT.md` from `assets/AUDIT.template.md`.
+3. `SUMMARY.md` from `assets/SUMMARY.template.md`.
+
+Only CONFIRMED and PARTIAL go into the production problems. NOT CHECKED is a separate list, and REFUTED is one line at the end.
+
+### Reviewers (large audit)
+
+Two independent reviewers read the finished `AUDIT.md` against `parts/` and the disk: what in the report has no support, what from `parts/` got lost, where the fix plan cannot be verified. The assembler revises according to the remarks, and the second edition goes to the owner.
+
+## 4. The schema of the map `BRANCH_MAP.json`
 
 ```json
 {
-  "name": "контур X",
+  "name": "pipeline X",
   "date": "2026-10-24",
   "stations": [
-    {"id": "build", "name": "Сборка профиля", "files": ["cmo/build.py"], "inputs": ["snap"], "arrays": ["decisions"],
-     "outputs": ["profile"], "locks": ["guard.check внутри save()"], "status": "ok",
+    {"id": "build", "name": "Profile build", "files": ["cmo/build.py"], "inputs": ["snap"], "arrays": ["decisions"],
+     "outputs": ["profile"], "locks": ["guard.check inside save()"], "status": "ok",
      "evidence": "cmo/build.py:120", "problems": ["C1-P2"]}
   ],
   "arrays": [
-    {"id": "decisions", "path": "cpu_spec/decisions.json", "what": "лист решений по полям", "writers": ["make_sheet.py"],
+    {"id": "decisions", "path": "cpu_spec/decisions.json", "what": "decision sheet by field", "writers": ["make_sheet.py"],
      "readers": ["build"], "in_product": true}
   ],
   "flows": [
-    {"from": "snap", "to": "build", "what": "тайминги и сопротивления", "path": "профиль"}
+    {"from": "snap", "to": "build", "what": "timings and resistances", "path": "profile"}
   ]
 }
 ```
 
-- `status`: `ok`, `weak` (работает, но держится текстом или с дырой), `broken`, `dead` (не используется).
-- `locks`: пустой список = станция вне замков. Замок называется так, чтобы его можно было найти: файл и функция или хук и событие.
-- `flows[].path`: имя пути (например «профиль», «модель», «посетитель»), по нему `map_draw.py` рисует отдельные дорожки.
-- Узлы в `flows` должны существовать в `stations` или `arrays`. Внешний мир (пользователь, железо, площадка) заводи станцией со статусом `ok` и пометкой `"external": true`.
+- `status`: `ok`, `weak` (works, but is held by text or has a hole), `broken`, `dead` (unused).
+- `locks`: an empty list means the station is outside the locks. A lock is named so that it can be found: a file and a function, or a hook and an event.
+- `flows[].path`: the name of a path (for example "profile", "model", "visitor"); `map_draw.py` draws a separate lane for each.
+- The nodes in `flows` must exist in `stations` or `arrays`. Model the outside world (the user, the hardware, the platform) as a station with status `ok` and the mark `"external": true`.
 
-## 5. Цена и запуск веера
+## 5. Cost and launching a fan-out
 
-- Назови владельцу число агентов и примерную долю лимита до запуска. Без его прямого слова веер не запускается.
-- Чтецы и проверяющие могут идти на модели попроще, сборщик и проверяющий высоких находок на сильной.
-- Барьер между чтецами и проверяющим оправдан (проверке нужны все находки, чтобы свести дубли). Между чтецом и его же проверкой барьер не нужен, на большом аудите веди их конвейером.
-- Если веер упал на лимите, урожай не потерян: результаты завершённых агентов лежат в журнале запуска, продолжай с кэша, а не заново.
-- Субагенту могут запретить запись файлов. Тогда пусть вернёт текст отчёта в поле ответа, а файл запишет оркестратор.
+- Tell the owner the number of agents and the approximate share of the usage limit before launch. Without the owner's direct word the fan-out does not start.
+- Readers and verifiers can run on a simpler model; the assembler and the verifier of high findings run on a strong one.
+- A barrier between the readers and the verifier is justified (verification needs all the findings in order to merge duplicates). Between a reader and its own verification no barrier is needed; on a large audit run them as a pipeline.
+- If the fan-out died on a usage limit, the harvest is not lost: the results of the finished agents are in the run log, so continue from the cache and not from scratch.
+- A subagent may be forbidden to write files. In that case let it return the report text in its answer, and the orchestrator writes the file.
 
-## 6. Типичные провалы аудита
+## 6. Typical audit failures
 
-- **Опись = список файлов.** Опись отвечает, что идёт в продукт, а что нет. Список папок этого не говорит.
-- **«Тесты зелёные» без числа.** Пиши «47 проверок, 47 прошло, команда такая-то».
-- **Находка без сценария.** «Нет проверки типа» не находка. «На 1R поле число, на 2R список, `checks` падает на первом же 1R снимке, `snapshot.py:212`» находка.
-- **Проверяющему дали вывод.** Ему дают утверждение и задание опровергнуть, а не «подтверди, что X».
-- **Чертёж из головы.** Рисуется только из карты, иначе чертёж повторяет слепоту автора.
-- **Корпус без реплик «на ходу».** Владелец часто отменяет или поправляет закон, пока модель работает, и такая реплика в стенограмме лежит вложением очереди, а не обычной записью. Сборщик, который берёт только обычные записи, теряет именно отмены: в живом аудите снятый закон «не выше 1,30 В» прошёл заверение другой моделью как действующий, потому что отмена была набрана посреди хода. `owner_words.py` берёт и такие реплики, и ответы на вопросы; в своём сборщике проверь это первым.
-- **Отчёт на жаргоне.** Владелец, который не понял отчёт, перестаёт спорить, и контур начинает жить своей жизнью. Коды участков и находок только в `AUDIT.md`, в выжимке человеческие слова.
+- **The inventory is a file list.** An inventory answers what goes into the product and what does not. A list of folders does not say that.
+- **"Tests are green" with no number.** Write "47 checks, 47 passed, the command was such-and-such".
+- **A finding without a scenario.** "There is no type check" is not a finding. "On 1R the field is a number, on 2R it is a list, `checks` crashes on the very first 1R snapshot, `snapshot.py:212`" is a finding.
+- **The verifier was handed a conclusion.** It is given a claim and the task to refute it, not "confirm that X".
+- **A diagram from the head.** It is drawn only from the map; otherwise the diagram repeats its author's blind spots.
+- **A corpus without lines said "on the fly".** The owner often cancels or corrects a law while the model is working, and such a line sits in the transcript as a queue attachment, not as an ordinary entry. A collector that takes only ordinary entries loses exactly the cancellations: in a live audit the lifted law "no higher than 1.30 V" passed the cross-model review as still in force, because the cancellation had been typed in the middle of a turn. `owner_words.py` takes such lines too, as well as answers to questions; check this first in your own collector.
+- **A report in jargon.** An owner who did not understand the report stops arguing, and the pipeline starts living a life of its own. Section and finding codes belong only in `AUDIT.md`; the summary uses human words.

@@ -1,18 +1,18 @@
-# <id>: <участок> (чтец, <дата>)
+# <id>: <section> (reader, <date>)
 
-## Опись
-Станции (скрипты, шаги): <имя, путь, что делает, идёт ли в продукт>.
-Массивы (базы, таблицы, журналы): <путь, кто пишет, кто читает>.
-Мёртвый груз и дубли: <что лежит и не используется, с опорой>.
+## Inventory
+Stations (scripts, steps): <name, path, what it does, whether it goes into the product>.
+Datasets (databases, tables, logs): <path, who writes, who reads>.
+Dead weight and duplicates: <what sits unused, with support>.
 
-## Проблемы прода
-- **<id>-P1, высокая.** <что сломано или сломается>. Опора: `<путь:строка>` или `<команда>` -> `<вывод>`. Сценарий: <что увидит потребитель>. Починка: <одна фраза>.
+## Production problems
+- **<id>-P1, high.** <what is broken or will break>. Support: `<path:line>` or `<command>` -> `<output>`. Scenario: <what the consumer will see>. Fix: <one sentence>.
 
-## Вне замков
-- <закон или просьба владельца, дата> -> <где держится: замок `путь:строка` / только текст `файл` / нигде> -> <почему так и чем грозит>.
+## Outside the locks
+- <the owner's law or request, date> -> <where it is held: a lock at `path:line` / text only in `file` / nowhere> -> <why, and what it threatens>.
 
-## Пункты прошлого аудита
-- <пункт>: <статус сейчас, опора>.
+## Items from the previous audit
+- <item>: <status now, support>.
 
-## Что проверено машинно
-- `<команда>`: <итог с числами>.
+## What was checked by machine
+- `<command>`: <the result, with numbers>.

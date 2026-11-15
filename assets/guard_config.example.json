@@ -1,10 +1,10 @@
 {
-  "name": "ЗАМОК ВЫПУСКА",
+  "name": "RELEASE LOCK",
   "protected": ["dist/", "U:/", "/mnt/u/"],
   "protected_ext": [],
   "allowed": ["release_gate\\.py\\s+(release|check|find|stamp)\\b"],
   "deny_tools": ["mcp__.*__file_upload"],
   "state_dirs": [".claude/state/"],
-  "help": "Путь один: python scripts/release_gate.py release <файл> --dest dist/ (нужен вердикт судьи по sha этого файла: release_gate.py stamp). Снять замок может только владелец своими словами.",
+  "help": "There is one path: python scripts/release_gate.py release <file> --dest dist/ (it needs the judge's verdict on the sha of this file: release_gate.py stamp). Only the owner can lift the lock, in their own words.",
   "fail_closed": true
 }

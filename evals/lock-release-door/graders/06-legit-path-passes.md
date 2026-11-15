@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-Законный путь (суд другим лицом по текущему sha, затем выпуск через дверь) проходит и копия в dist сверена по sha256
+The legitimate path (a judgment by a different party on the current sha, then a release through the door) passes, and the copy in dist is verified by sha256

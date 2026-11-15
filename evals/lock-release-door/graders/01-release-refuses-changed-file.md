@@ -4,4 +4,4 @@ focus: trace
 weight: 1
 ---
 
-После правки замка выпуск файла, изменённого после суда (sha не совпадает с вердиктом), даёт отказ, и это показано прогоном команды
+After the lock is added, releasing a file that was changed after the judgment (the sha does not match the verdict) is refused, and this is shown by running the command

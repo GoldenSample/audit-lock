@@ -1,24 +1,24 @@
-// Пример сценария веера для инструмента Workflow в Claude Code (фаза АУДИТ, около 10 агентов).
-// Запуск только по прямому слову владельца, цену назвать до запуска.
-// args: { dir: "C:/work/audit-2026-10-24", sectors: [{ id: "C1", name: "Сборка и выпуск", hint: "что проверить" }, ...] }
-// SCOPE.md и words/OWNER_WORDS.jsonl готовятся до запуска (шаги 0-2 SKILL.md).
+// An example fan-out script for the Workflow tool in Claude Code (the AUDIT phase, about 10 agents).
+// Launch only on the owner's direct word, and name the cost before launch.
+// args: { dir: "/work/audit-2026-10-24", sectors: [{ id: "C1", name: "Build and release", hint: "what to check" }, ...] }
+// SCOPE.md and words/OWNER_WORDS.jsonl are prepared before launch (steps 0-2 of SKILL.md).
 export const meta = {
   name: 'audit-lock-audit',
-  description: 'Аудит контура: чтецы участков и слов владельца, проверяющий с заверением другой моделью, карта и отчёт',
-  phases: [{ title: 'Чтецы' }, { title: 'Проверка' }, { title: 'Сборка' }],
+  description: 'Pipeline audit: readers of sections and of the owner\'s words, a verifier with a cross-model review, the map and the report',
+  phases: [{ title: 'Readers' }, { title: 'Verification' }, { title: 'Assembly' }],
 }
 
 const DIR = args.dir
-const COMMON = `Прочитай целиком ${DIR}/SCOPE.md: принцип, участки и законы аудита (только чтение, опора путь:строка на каждое утверждение).
-Нарушение законов SCOPE = провал. Слова владельца: ${DIR}/words/OWNER_WORDS.jsonl.
-Отчёт запиши в указанный файл. Если запись запрещена, верни весь текст в поле fallback_text.`
+const COMMON = `Read ${DIR}/SCOPE.md in full: the principle, the sections and the laws of the audit (read only, support as path:line for every claim).
+Breaking the laws of SCOPE means failure. The owner's words: ${DIR}/words/OWNER_WORDS.jsonl.
+Write the report to the file named below. If writing is forbidden, return the whole text in the fallback_text field.`
 
 const FIND = {
   type: 'object',
   properties: {
     file_written: { type: 'string' },
     findings: { type: 'array', items: { type: 'object', properties: {
-      id: { type: 'string' }, severity: { type: 'string', enum: ['высокая', 'средняя', 'низкая'] },
+      id: { type: 'string' }, severity: { type: 'string', enum: ['high', 'medium', 'low'] },
       title: { type: 'string' }, evidence: { type: 'string' }, fix: { type: 'string' } }, required: ['id', 'severity', 'title', 'evidence'] } },
     outside_gate: { type: 'array', items: { type: 'object', properties: {
       law: { type: 'string' }, where: { type: 'string' }, why: { type: 'string' } }, required: ['law', 'where'] } },
@@ -27,33 +27,33 @@ const FIND = {
   required: ['findings', 'outside_gate'],
 }
 
-phase('Чтецы')
+phase('Readers')
 const readers = await parallel([
   ...args.sectors.map(s => () => agent(
-    `${COMMON}\nТВОЙ УЧАСТОК ${s.id}: ${s.name}. ${s.hint}\nСтруктура: assets/part.template.md скила audit-lock. Отчёт: ${DIR}/parts/${s.id}.md`,
-    { label: s.id, phase: 'Чтецы', schema: FIND })),
-  () => agent(`${COMMON}\nТЫ ЧТЕЦ СЛОВ ВЛАДЕЛЬЦА: законы и просьбы с датой и цитатой, где держатся (замок / текст / нигде), ` +
-    `противоречия, просьбы без исполнения. Отчёт: ${DIR}/parts/W_WORDS.md`, { label: 'W', phase: 'Чтецы', schema: FIND }),
+    `${COMMON}\nYOUR SECTION ${s.id}: ${s.name}. ${s.hint}\nStructure: assets/part.template.md of the audit-lock skill. Report: ${DIR}/parts/${s.id}.md`,
+    { label: s.id, phase: 'Readers', schema: FIND })),
+  () => agent(`${COMMON}\nYOU ARE THE READER OF THE OWNER'S WORDS: laws and requests with a date and a quote, where each is held (lock / text / nowhere), ` +
+    `contradictions, requests never carried out. Report: ${DIR}/parts/W_WORDS.md`, { label: 'W', phase: 'Readers', schema: FIND }),
 ])
 const got = readers.filter(Boolean)
-log(`чтецов вернулось ${got.length} из ${args.sectors.length + 1}`)
+log(`readers returned: ${got.length} of ${args.sectors.length + 1}`)
 
-phase('Проверка')
-const verify = await agent(`${COMMON}\nТЫ ПРОВЕРЯЮЩИЙ. Каждую высокую и среднюю находку перепроверь с диска своими командами, ` +
-  `сначала попытайся опровергнуть; низкие выборочно (не меньше трети); дубли сведи. Список «вне замков» отдай модели другого ` +
-  `семейства (scripts/cross_judge.py), ответ дословно в ${DIR}/parts/CROSS_ATTEST.md. Отчёт ${DIR}/parts/VERIFY.md.\n` +
-  `НАХОДКИ: ${JSON.stringify(got.map(r => ({ findings: r.findings, outside_gate: r.outside_gate, file: r.file_written })))}`,
-  { label: 'V', phase: 'Проверка', schema: { type: 'object', properties: {
+phase('Verification')
+const verify = await agent(`${COMMON}\nYOU ARE THE VERIFIER. Re-check every high and medium finding from disk with your own commands, ` +
+  `and try to refute it first; sample the low ones (at least a third); merge duplicates. Hand the "outside the locks" list to a model ` +
+  `from a different family (scripts/cross_judge.py), with the answer verbatim in ${DIR}/parts/CROSS_ATTEST.md. Report: ${DIR}/parts/VERIFY.md.\n` +
+  `FINDINGS: ${JSON.stringify(got.map(r => ({ findings: r.findings, outside_gate: r.outside_gate, file: r.file_written })))}`,
+  { label: 'V', phase: 'Verification', schema: { type: 'object', properties: {
     verdicts: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' },
-      verdict: { type: 'string', enum: ['ПОДТВЕРЖДЕНО', 'ЧАСТИЧНО', 'ОПРОВЕРГНУТО', 'НЕ ПРОВЕРЕНО'] }, note: { type: 'string' } },
+      verdict: { type: 'string', enum: ['CONFIRMED', 'PARTIAL', 'REFUTED', 'NOT CHECKED'] }, note: { type: 'string' } },
       required: ['id', 'verdict'] } } }, required: ['verdicts'] } })
 
-phase('Сборка')
-const report = await agent(`${COMMON}\nТЫ СБОРЩИК. Прочитай все ${DIR}/parts/*.md. Запиши ${DIR}/BRANCH_MAP.json по схеме ` +
-  `references/audit-method.md раздел 4 и прогони scripts/map_check.py; ${DIR}/AUDIT.md по assets/AUDIT.template.md ` +
-  `(в проблемы только ПОДТВЕРЖДЕНО и ЧАСТИЧНО); ${DIR}/SUMMARY.md по assets/SUMMARY.template.md.\n` +
-  `ВЕРДИКТЫ: ${JSON.stringify(verify ? verify.verdicts : [])}`,
-  { label: 'R', phase: 'Сборка', schema: { type: 'object', properties: { summary_text: { type: 'string' },
+phase('Assembly')
+const report = await agent(`${COMMON}\nYOU ARE THE ASSEMBLER. Read all of ${DIR}/parts/*.md. Write ${DIR}/BRANCH_MAP.json following the schema in ` +
+  `references/audit-method.md section 4 and run scripts/map_check.py; ${DIR}/AUDIT.md from assets/AUDIT.template.md ` +
+  `(only CONFIRMED and PARTIAL go into the problems); ${DIR}/SUMMARY.md from assets/SUMMARY.template.md.\n` +
+  `VERDICTS: ${JSON.stringify(verify ? verify.verdicts : [])}`,
+  { label: 'R', phase: 'Assembly', schema: { type: 'object', properties: { summary_text: { type: 'string' },
     map_check: { type: 'string' } }, required: ['summary_text'] } })
 
 return { readers: got.length, verdicts: verify ? verify.verdicts.length : 0, summary: report ? report.summary_text : null }

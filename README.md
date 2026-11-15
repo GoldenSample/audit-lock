@@ -1,46 +1,48 @@
-# audit-lock: аудит + замок
+# audit-lock: audit + lock
 
-Скил для тех, у кого вокруг модели выросла большая промпт-машина: десятки скилов, длинные инструкции, память, хуки, агенты, свои конвейеры. Он делает две вещи. Сначала честно показывает, какие правила машины реально исполняются, а какие только записаны. Потом превращает главные правила в замки, которые модель не может обойти, и доказывает это тестами.
+Russian version: [README.ru.md](README.ru.md) and [SKILL.ru.md](SKILL.ru.md). The last full Russian edition (references, templates, scripts) is kept at the tag [`v1-ru`](https://github.com/GoldenSample/audit-lock/tree/v1-ru).
 
-## Зачем он нужен
+A skill for people who have grown a large prompt machine around a model: dozens of skills, long instructions, memory, hooks, agents, their own pipelines. It does two things. First it shows honestly which of the machine's rules are really enforced and which are only written down. Then it turns the most important rules into locks that the model cannot bypass, and proves it with tests.
 
-Чем больше промпт-машина, тем хуже исполняется каждое отдельное правило. Это не злой умысел модели, это её природа: она идёт путём наименьшего сопротивления. Правило из длинной инструкции проигрывает «очевидно короткому» решению. После сжатия контекста модель забывает, что читала. Свою работу она находит убедительной, и проверка самой себя превращается в печать «PASS». Правила начинают спорить друг с другом, и судья ходит кругами.
+## Why you need it
 
-Владелец при этом видит гладкие отчёты и не знает, что половина законов давно держится только на бумаге. Обычно это вскрывается, когда брак уже ушёл к людям: в ролике нарисован кирпич вместо готовой модели, в канал ушла выдумка, на флешку записан не тот профиль.
+The larger the prompt machine, the worse each individual rule is followed. This is not malice on the model's part, it is its nature: it takes the path of least resistance. A rule from a long instruction loses to an "obviously shorter" solution. After context compaction the model forgets what it read. It finds its own work convincing, and checking itself turns into a "PASS" stamp. The rules start contradicting each other, and the judge goes in circles.
 
-Скил отвечает на три вопроса, которые рано или поздно встают перед любой большой машиной:
-1. **Что у меня реально работает?** Опись станций и данных: что идёт в продукт, что лежит мёртвым грузом, где продукт отличается от проверенного.
-2. **Какие мои правила держатся только текстом?** Каждый закон владельца берётся из его собственных слов в стенограммах, не из пересказов. Для каждого видно, где он стоит: замком на пути, тестом или только строкой в скиле.
-3. **Как сделать, чтобы правило исполнялось?** Замок ставится на само действие (запись, выпуск, вызов модели, заливка) и проверяет содержимое, а не заполненные исполнителем поля. Каждая известная лазейка покрыта тестом. Замок прогоняется на старом браке и обязан его остановить.
+Meanwhile the owner sees smooth reports and does not know that half of the laws have long been held only on paper. This usually comes out once the defect has already reached people: a hand-drawn brick in the video instead of the finished model, a fabrication posted to the channel, the wrong profile written to the USB drive.
 
-## Что внутри
+The skill answers three questions that sooner or later face any large machine:
+1. **What actually works here?** An inventory of stations and data: what goes into the product, what sits as dead weight, where the product differs from what was checked.
+2. **Which of my rules are held by text alone?** Every law of the owner is taken from the owner's own words in the transcripts, not from retellings. For each one you can see where it stands: as a lock on the path, as a test, or only as a line in a skill.
+3. **How do I make a rule get enforced?** A lock goes on the action itself (a write, a release, a model call, an upload) and checks the content, not fields filled in by the executor. Every known loophole is covered by a test. The lock is run against the old defect and has to stop it.
 
-- **Метод аудита.** Чтецы по участкам, чтец слов владельца, проверяющий-скептик, который сначала пытается опровергнуть находку, заверение другой моделью, карта контура из данных и чертёж из карты, отчёт простыми словами с одним главным вопросом.
-- **Каталог замков:** единственная дверь выпуска с вердиктом по sha файла, замок внутри вызова, хук на боковые двери, печать «план до результата», подпись владельца только дословной цитатой, слот общего ресурса, сторож с событием нормы.
-- **Каталог обходов, которые стоит тестировать:** другой инструмент, перенаправление, `python -c`, `cd`, регистр, кавычки, закодированная команда, загрузка через браузер, скрипт в два шага, подмена файла после проверки.
-- **Скрипты без зависимостей (Python 3.8+):**
-  - `owner_words.py`: собирает слова владельца из стенограмм и проверяет, говорил ли он цитату;
-  - `release_gate.py`: дверь выпуска;
-  - `guard_hook.py`: хук на боковые двери по настройке;
-  - `test_hook.py`: харнес тестов хука;
-  - `map_check.py` и `map_draw.py`: проверка карты и чертёж;
-  - `cross_judge.py`: заверение моделью другого семейства через любой OpenAI-совместимый адрес.
+## What is inside
 
-## Как начать
+- **The audit method.** Readers per section, a reader of the owner's words, a skeptical verifier who first tries to refute each finding, a review by a different model, a map of the pipeline built from data and a diagram drawn from the map, a report in plain words with one main question.
+- **A catalog of locks:** a single release door with a verdict bound to the file's sha, a lock inside the call, a hook on the side doors, a "plan before the result" seal, owner sign-off only as a verbatim quote, a shared-resource slot, a watchdog with a baseline event.
+- **A catalog of bypasses worth testing:** another tool, redirection, `python -c`, `cd`, letter case, quotes, an encoded command, an upload through the browser, a two-step script, swapping the file after the check.
+- **Scripts with no dependencies (Python 3.8+):**
+  - `owner_words.py`: collects the owner's words from the transcripts and checks whether the owner said a given quote;
+  - `release_gate.py`: the release door;
+  - `guard_hook.py`: a configurable hook on the side doors;
+  - `test_hook.py`: a hook test harness;
+  - `map_check.py` and `map_draw.py`: the map check and the diagram;
+  - `cross_judge.py`: a review by a model from a different family through any OpenAI-compatible endpoint.
 
-1. Положи папку `audit-lock` в папку скилов (`~/.claude/skills/` или `.claude/skills/` проекта). Проще всего клоном:
+## Getting started
+
+1. Put the `audit-lock` folder into your skills folder (`~/.claude/skills/` or the project's `.claude/skills/`). The easiest way is a clone:
    ```
    git clone https://github.com/GoldenSample/audit-lock ~/.claude/skills/audit-lock
    ```
-2. Скажи модели: «проведи аудит моего контура по audit-lock» и назови, что проверять. Агентный веер она запустит, только если ты прямо попросишь, и назовёт цену заранее.
-3. Прочитай выжимку, ответь на главный вопрос.
-4. Скажи «ставь замки»: модель возьмёт план из отчёта, поставит замки, покажет тесты и прогон на старом браке.
+2. Tell the model: "run an audit of my pipeline with audit-lock" and say what to check. It will launch an agent fan-out only if you ask for it directly, and it will name the cost in advance.
+3. Read the summary and answer the main question.
+4. Say "set the locks": the model takes the plan from the report, adds the locks, and shows the tests and the run against the old defect.
 
-Быстрая проверка, что хук работает у тебя:
+A quick check that the hook works on your machine:
 ```
 python scripts/test_hook.py scripts/guard_hook.py assets/bypass_cases.example.json --env GUARD_CONFIG=assets/guard_config.example.json
 ```
 
-## Откуда
+## Where it comes from
 
-Скил собран из живой практики: аудиты конвейеров роликов, новостного канала, прозы и разгона железа, где модель раз за разом обходила записанные правила. Каждый закон в `SKILL.md` появился после конкретного провала, и рядом записано, почему он такой.
+The skill was assembled from live practice: audits of pipelines for videos, a news channel, fiction and hardware overclocking, where the model bypassed written rules again and again. Every law in `SKILL.md` appeared after a specific failure, and the reason for it is written next to it.

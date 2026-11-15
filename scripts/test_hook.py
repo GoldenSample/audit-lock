@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Харнес тестов хука: подаёт вызовы инструментов в stdin так же, как это делает Claude Code, и сверяет решение.
+"""Hook test harness: feeds tool calls to stdin the same way Claude Code does and compares the decision.
 
-  python test_hook.py ХУК.py КЕЙСЫ.json [--env GUARD_CONFIG=путь] [--python python3]
+  python test_hook.py HOOK.py CASES.json [--env GUARD_CONFIG=path] [--python python3]
 
-КЕЙСЫ.json = список {"name": "...", "tool_name": "Bash", "tool_input": {...}, "cwd": "...", "expect": "deny" | "allow"}
-(базовый набор обходов: assets/bypass_cases.example.json). Хук зовётся с PYTHONIOENCODING=utf-8 и HOOK_SMOKE=1, как в бою
-без записи. Проверяется и сам закон хука: код выхода 0, ответ пустой или JSON. Итог: прошло N из M, код 0 = всё прошло.
+CASES.json = a list of {"name": "...", "tool_name": "Bash", "tool_input": {...}, "cwd": "...", "expect": "deny" | "allow"}
+(the base set of bypasses: assets/bypass_cases.example.json). The hook is called with PYTHONIOENCODING=utf-8 and HOOK_SMOKE=1,
+as in the field but without writes. The hook's own law is checked too: exit code 0, and the answer is empty or JSON.
+Result: N of M passed; exit code 0 = everything passed.
 """
 from __future__ import annotations
 
@@ -33,7 +34,7 @@ def run(hook: str, case: dict, env: dict, py: str) -> tuple[str, str, int]:
                 reason = h.get("permissionDecisionReason") or j.get("reason") or ""
         except ValueError:
             decision = "broken"
-            reason = "ответ не JSON: " + out[:120]
+            reason = "the answer is not JSON: " + out[:120]
     return decision, reason, p.returncode
 
 
@@ -62,10 +63,10 @@ def main() -> int:
         dec, why, code = run(hook, c, env, py)
         good = dec == c["expect"] and code == 0
         ok += good
-        mark = "ок " if good else "БРАК"
-        extra = "" if code == 0 else f" (код выхода {code}: закон хука = всегда 0)"
-        print(f"{mark} {c['name']}: ждали {c['expect']}, вышло {dec}{extra}" + (f" | {why[:110]}" if why and not good else ""))
-    print(f"ИТОГ: прошло {ok} из {len(cases)}")
+        mark = "ok  " if good else "FAIL"
+        extra = "" if code == 0 else f" (exit code {code}: the hook's law is always 0)"
+        print(f"{mark} {c['name']}: expected {c['expect']}, got {dec}{extra}" + (f" | {why[:110]}" if why and not good else ""))
+    print(f"TOTAL: {ok} of {len(cases)} passed")
     return 0 if ok == len(cases) else 1
 
 

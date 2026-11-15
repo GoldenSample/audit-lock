@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Слова владельца из стенограмм Claude Code: первоисточник аудита и проверка подписи цитатой.
+"""The owner's words from Claude Code transcripts: the audit's primary source and the check for sign-off by quote.
 
-Только процессор, ни одного вызова модели. Берутся реплики человека (origin.kind == human, у старых записей без origin:
-без promptSource и не isMeta), реплики, набранные, пока модель работала (вложение queued_command с origin human: обычной
-записи user у них нет, без этого теряются отмены и поправки на ходу), и ответы на AskUserQuestion (кроме отказа отвечать);
-служебные вставки (<...>, отзывы хуков, тексты скилов, продолжения после сжатия, сообщения других сессий) отброшены;
-блоки <pasted_content> вырезаются из текста владельца и помечаются полем pasted (вставленный лог или чужой пост не его слова).
+CPU only, not a single model call. It takes the human's messages (origin.kind == human; for old records without origin:
+no promptSource and not isMeta), messages typed while the model was working (a queued_command attachment with a human origin:
+these have no ordinary user record, and without them cancellations and corrections made on the fly are lost), and answers to
+AskUserQuestion (except a refusal to answer); service insertions (<...>, hook feedback, skill texts, continuations after
+compaction, messages from other sessions) are dropped; <pasted_content> blocks are cut out of the owner's text and flagged in
+the pasted field (a pasted log or someone else's post is not the owner's words).
 
   python owner_words.py collect --out DIR [--keys REGEX] [--since 2026-01-01] [--chunks 4] [--root ~/.claude/projects]
-      DIR/OWNER_WORDS.jsonl (ts, session, project, text, pasted) + куски OWNER_WORDS_01..N.jsonl для чтецов.
-      Дубли (форки сессий, повторы) схлопываются по тексту, остаётся самая ранняя дата.
-  python owner_words.py said "цитата" [--after 2026-10-24T10:00:00] [--root ...]
-      код 0 = владелец это сказал (печатает дату и реплику), 1 = не говорил. Цитата от 12 знаков ищется подстрокой
-      после чистки (регистр, ё, знаки); короче («да», «ок») засчитывается, только если это вся реплика.
+      DIR/OWNER_WORDS.jsonl (ts, session, project, text, pasted) + chunks OWNER_WORDS_01..N.jsonl for the readers.
+      Duplicates (session forks, repeats) are collapsed by text; the earliest date is kept.
+  python owner_words.py said "quote" [--after 2026-10-24T10:00:00] [--root ...]
+      exit code 0 = the owner said this (prints the date and the message), 1 = did not. A quote of 12 characters or more is
+      matched as a substring after normalization (case, punctuation); a shorter one ("yes", "ok") counts only if it is the
+      whole message.
 """
 from __future__ import annotations
 
@@ -29,15 +31,16 @@ META = ("<", "This session is being continued", "Continue from where you left of
         "[Cross-session", "Caveat:", "[SYSTEM NOTIFICATION", "[Request interrupted", "Stop hook feedback",
         "Base directory for this skill", "Commit the working tree", "Run the \"", "Your response above")
 PASTED = re.compile(r"<pasted_content.*?</pasted_content[^>]*>", re.S)
-# приложение приклеивает к реплике владельца служебный блок (сводка форка, список связанных сессий): блок вырезается, его
-# текст не слова владельца, а реплика за ним остаётся (Гор 26.10 «да, научи сторожа»: свежие реплики терялись целиком)
+# the app glues a service block onto the owner's message (a fork summary, a list of linked sessions): the block is cut out,
+# its text is not the owner's words, and the message after it stays (before this fix, fresh messages were lost entirely)
 REMIND = re.compile(r"<system-reminder>.*?</system-reminder>", re.S)
 MIN_SUB = 12
 
 
 def norm(s: str) -> str:
+    # lower case, punctuation and symbols collapsed to spaces; letters of any alphabet are kept
     s = str(s).lower().replace("ё", "е")
-    return " ".join(re.sub(r"[^0-9a-zа-я]+", " ", s).split())
+    return " ".join(re.sub(r"[\W_]+", " ", s).split())
 
 
 def joined(c) -> str:
@@ -55,16 +58,16 @@ def clean(t: str, kind: str) -> tuple[str, bool, str] | None:
 
 
 def human_texts(r: dict) -> list[tuple[str, bool, str]]:
-    """[(текст владельца без вставок, была ли вставка, вид)] из записи; пусто, если в ней нет слов человека.
+    """[(the owner's text without pasted blocks, whether there was a paste, kind)] from a record; empty if it holds no human words.
 
-    Вид: prompt = обычная реплика; queued = реплика, набранная, пока модель работала (в стенограмме это вложение
-    queued_command, обычной записи user у неё нет); answer = ответ на вопрос AskUserQuestion (выбор или свой текст)."""
+    Kind: prompt = an ordinary message; queued = a message typed while the model was working (in the transcript this is a
+    queued_command attachment with no ordinary user record); answer = an answer to an AskUserQuestion (a choice or free text)."""
     if r.get("isSidechain") or r.get("isMeta"):
         return []
     a = r.get("attachment")
     if r.get("type") == "attachment" and isinstance(a, dict) and a.get("type") == "queued_command":
         origin = a.get("origin")
-        if isinstance(origin, dict) and origin.get("kind") != "human":   # peer, task-notification: не владелец
+        if isinstance(origin, dict) and origin.get("kind") != "human":   # peer, task-notification: not the owner
             return []
         if origin is None and a.get("commandMode") != "prompt":
             return []
@@ -146,9 +149,9 @@ def collect(a) -> int:
     span = f"{rows[0]['ts'][:10]} .. {rows[-1]['ts'][:10]}" if rows else "-"
     chars = sum(len(x["text"]) for x in rows)
     kinds = {k: sum(x["kind"].split(":")[0] == k for x in rows) for k in ("prompt", "queued", "answer")}
-    print(f"реплик {len(rows)} ({span}; обычных {kinds['prompt']}, набранных во время работы {kinds['queued']}, "
-          f"ответов на вопросы {kinds['answer']}), знаков {chars}, со вставками {sum(x['pasted'] for x in rows)}, "
-          f"кусков {a.chunks}: {out}")
+    print(f"messages {len(rows)} ({span}; ordinary {kinds['prompt']}, typed while the model was working {kinds['queued']}, "
+          f"answers to questions {kinds['answer']}), characters {chars}, with pasted blocks {sum(x['pasted'] for x in rows)}, "
+          f"chunks {a.chunks}: {out}")
     return 0
 
 
@@ -178,20 +181,20 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("collect")
     c.add_argument("--out", required=True)
-    c.add_argument("--keys", help="регулярка темы (без неё берутся все реплики)")
+    c.add_argument("--keys", help="topic regex (without it, all messages are taken)")
     c.add_argument("--since", help="YYYY-MM-DD")
     c.add_argument("--chunks", type=int, default=4)
     c.add_argument("--root", default="~/.claude/projects")
     s = sub.add_parser("said")
     s.add_argument("quote")
-    s.add_argument("--after", help="ISO-время: реплика не раньше (момент печати замка)")
+    s.add_argument("--after", help="ISO time: the message is no earlier than this (the moment the lock was sealed)")
     s.add_argument("--root", default="~/.claude/projects")
     a = ap.parse_args()
     if a.cmd == "collect":
         return collect(a)
     hit = said(a.quote, Path(a.root).expanduser(), a.after)
     if not hit:
-        print("не найдено: владелец так не говорил" + (f" после {a.after}" if a.after else ""))
+        print("not found: the owner did not say this" + (f" after {a.after}" if a.after else ""))
         return 1
     print(hit["ts"], hit["session"], hit["kind"].split(":")[0], hit["text"][:300])
     return 0

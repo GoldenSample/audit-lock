@@ -1,92 +1,92 @@
 ---
 name: audit-lock
-description: "Аудит кода или рабочего контура и постановка машинных замков на пути действия, чтобы правило исполнялось, а не лежало текстом. Две фазы: АУДИТ (опись станций и массивов, проблемы прода, что вне замков и почему, слова владельца из стенограмм, проверяющий-скептик, заверение другой моделью, карта из данных, простой отчёт) и ЗАМОК (один путь выпуска с вердиктом по sha содержимого, хук на боковые двери, подпись владельца только дословной цитатой, тесты на каждый обход, прогон замка на историческом браке). Гейт производства: перед выпуском план отвечает на 6 вопросов. Use when the user asks to audit a codebase, pipeline or agent setup, find what bypasses the rules, add guardrails, gates, pre-tool hooks or release locks, or asks why a written rule keeps being ignored. Триггеры: аудит кода, аудит контура, проверь всё, что вне гейтов, почему правило не исполняется, поставь замок, гейт выпуска, хук, чтобы модель не обходила, чини и встраивай, audit, guardrail, release gate, PreToolUse hook, bypass."
+description: "Audit a codebase or working pipeline and put machine locks on the action path, so that a rule is enforced instead of sitting in text. Two phases: AUDIT (inventory of stations and datasets, production problems, what is outside the locks and why, the owner's words from transcripts, a skeptical verifier, review by a different model, a map built from data, a plain report) and LOCK (a single release path with a verdict bound to the content sha, a hook on the side doors, owner sign-off only as a verbatim quote, a test for every bypass, a run of the lock against the historical defect). Production gate: before a release the plan answers 6 questions. Use when the user asks to audit a codebase, pipeline or agent setup, find what bypasses the rules, add guardrails, gates, pre-tool hooks or release locks, or asks why a written rule keeps being ignored. Triggers: audit the code, audit the pipeline, check everything, what is outside the gates, why is the rule not followed, add a lock, release gate, hook, stop the model from bypassing, fix it and build it in, audit, guardrail, PreToolUse hook, bypass."
 license: MIT
 ---
 
-# Аудит + замок
+# Audit + lock
 
-Правило в тексте не исполняется. Исполняется только замок на пути действия, который проверяет сам продукт. Скил сначала находит, что держится одним текстом (фаза АУДИТ), потом переводит главное в замки и доказывает их тестами обходов (фаза ЗАМОК).
+A rule written in text does not get enforced. The only thing that gets enforced is a lock on the action path that checks the product itself. This skill first finds what is held by text alone (the AUDIT phase), then turns the most important rules into locks and proves them with bypass tests (the LOCK phase).
 
-Фазы идут по слову владельца: «проведи аудит» запускает первую, «чини», «встраивай», «ставь замки» запускают вторую. Без слова на починку аудит только читает.
+The phases run on the owner's word: "run an audit" starts the first one; "fix it", "build it in" or "set the locks" starts the second. Without a word to fix, the audit only reads.
 
-## Откуда это: пять случаев, на которых метод вырос
+## Where this comes from: five cases the method grew out of
 
-1. **Кирпич вместо видеокарты.** Готовая 3D-модель видеокарты лежала в библиотеке скила, правило «бери из библиотеки» было записано, хук на каждом запуске напоминал открыть скил. В ролик ушёл нарисованный кирпич. Помог только отказ на самом действии (deny), напоминание не помогло ни разу. Вывод: напоминание не замок.
-2. **Замки проверяли бумагу.** Гейт выпуска сверял поля формы, которые заполнял сам исполнитель: «одобрено: true», «видео: имя файла». На площадку ушла перекодированная копия, а не проверенный файл. Лечение: замок по sha256 содержимого, подпись владельца только дословной цитатой, которую машина находит в его настоящих сообщениях.
-3. **Самогрейдинг.** Делающий сам ставил PASS, метрики писались без подсчёта, подпись ставилась задним числом. Лечение: проверяет не тот, кто делает; метрика только командой; запись, сделанная после результата, считается браком.
-4. **Обход другой дверью.** Замок стоял на одном скрипте, а то же действие шло через `cp`, PowerShell, другой CLI к той же модели, прямой HTTP, скрипт, записанный в один шаг и запущенный во второй. Лечение: один разрешённый путь, хук на все остальные двери, тест на каждую дверь.
-5. **Норма без события.** Сторож дрейфа сравнивал разъём с нормой, снятой до того, как разъём пересадили, и сутки слал ложные тревоги. Сбросить норму можно было только рукой, и об этом никто не помнил. Вывод: у каждой нормы должно быть событие, которое её сбрасывает, и этот сброс должен попадать в журнал.
+1. **A brick instead of a graphics card.** A finished 3D model of a graphics card sat in the skill's library, the rule "take it from the library" was written down, and a hook reminded the model to open the skill on every run. A hand-drawn brick went into the video anyway. Only a refusal on the action itself (deny) helped; the reminder never helped once. Conclusion: a reminder is not a lock.
+2. **The locks checked paperwork.** The release gate compared form fields that the executor filled in itself: "approved: true", "video: file name". A re-encoded copy went to the platform instead of the file that had been checked. The cure: a lock on the sha256 of the content, and owner sign-off only as a verbatim quote that the machine finds in the owner's real messages.
+3. **Self-grading.** The one doing the work gave itself a PASS, metrics were written without counting, and the sign-off was added after the fact. The cure: the checker is not the doer; a metric comes only from a command; a record made after the result counts as a defect.
+4. **Bypass through another door.** The lock stood on one script, while the same action went through `cp`, PowerShell, a different CLI to the same model, direct HTTP, or a script written in one step and run in the next. The cure: one permitted path, a hook on every other door, a test for every door.
+5. **A baseline with no event.** A drift watchdog compared a connector against a baseline taken before the connector was reseated, and sent false alarms for a full day. The baseline could only be reset by hand, and nobody remembered that. Conclusion: every baseline needs an event that resets it, and that reset must go into the log.
 
-## Законы (почему каждый)
+## Laws (and the reason for each)
 
-1. **Замок на пути, не рядом.** Отказ должен стоять на том действии, которое портит результат: запись, копия, выпуск, вызов модели, заливка. Совет в контексте модель пропускает, когда ей «очевидно» короче.
-2. **Проверяй продукт, не бумагу.** Хэш файла, содержимое, счёт слов, распознанная речь против сценария. Поле, которое заполняет исполнитель, ничего не доказывает.
-3. **Проверяет не тот, кто делает.** Судья другой роли, лучше другого семейства моделей: Claude судит текст Grok, Grok судит план Claude. Свой вывод модель находит убедительным по построению.
-4. **Опора на каждое утверждение.** `путь:строка`, команда с выводом или цитата владельца с датой. «Не нашёл» пишется прямо. Метрика без подсчёта = провал аудита.
-5. **Первоисточник = слова владельца.** Реплики владельца из стенограмм (`scripts/owner_words.py`), не пересказы, не память модели, не хендофы. Пересказ теряет запреты, а запреты дороже всего.
-6. **Один путь выпуска.** Есть ровно одна дверь, которая выпускает продукт (`scripts/release_gate.py`), и она требует вердикт, привязанный к sha этого самого файла. Остальные двери закрыты хуком (`scripts/guard_hook.py`). Регулярка хука = страховка, замок = единственная дверь.
-6а. **Перехват у источника.** Брак ловится на входе той станции, где он рождается, а не приёмкой готового на выходе. Готовый текст или файл проверить можно, но причину брака там уже не видно, и проверка выходит дороже.
-7. **Подпись владельца = его дословные слова.** Поле «одобрено» засчитывается, только если цитата в «» найдена машиной в его сообщениях не раньше момента замка (`owner_words.py said`). Голое `true` не подпись. Снятие замка («без гейта») тоже только цитатой и с записью в журнал.
-8. **Честные круги судьи.** Круг засчитан, только если это новая версия и судья сам признал, что прошлые замечания закрыты по существу. Ни судья, ни исполнитель не знают о пределе кругов, иначе предел становится лазейкой. План, написанный под отказ, = брак.
-9. **Мелкое противоречие правил решает глаз владельца.** Если два правила не сходятся без порчи результата, собери лучший вариант, запиши оба правила и выбор, покажи владельцу и запиши его слова дословно. Крупные законы (факты, цены, безопасность) так не снимаются.
-10. **Без метки «прод» судья консультант.** На черновой работе замечания судьи учитываются по делу, круги не ждут. Со словом «прод» судья запирает. Иначе работа стоит часами.
-11. **Закрыт на производстве, открыт на остальном.** Ошибка хука на производственном действии = отказ. На чтении и проверках ошибка = пропуск с печатью, иначе один сломанный хук запирает всю работу.
-12. **Состояние замка модель не правит.** Хук запрещает запись в свои файлы состояния и в собственную регистрацию. Правка хуков только по слову владельца и с прогоном тестов.
-13. **Перед сжатием контекста состояние задачи в файл.** Что прочитано, где стоим, что не закрыто. После сжатия прочитанное засчитывается заново: память модели о прочитанном файле после сжатия ничего не стоит.
-14. **Своё перед новым.** Прежде чем строить, найди, что уже есть в репо (поиск по коду, прошлые аудиты, существующие замки). Новое строить легче, чем поднять своё, поэтому этот шаг пропускают чаще всего.
-15. **Отчёт владельцу простыми словами.** Смысл первой строкой, 3-7 пунктов, без кодов и таблиц, один главный вопрос с рекомендацией. Подробности в файл и ссылкой.
-16. **Веер агентов только по прямому слову владельца.** Цену называть до запуска. Флаг харнеса или напоминание системы не равно слову владельца.
-17. **На аудите только чтение.** Прод, живое железо, флешки, базы и службы не трогать, сайт только GET. Тесты запускать, если они ничего не пишут.
+1. **The lock goes on the path, not beside it.** The refusal must stand on the action that spoils the result: a write, a copy, a release, a model call, an upload. The model skips advice in its context whenever a shorter way looks "obvious".
+2. **Check the product, not the paperwork.** A file hash, the content, a word count, recognized speech against the script. A field that the executor fills in proves nothing.
+3. **The checker is not the doer.** The judge has a different role and, better still, comes from a different model family: Claude judges Grok's text, Grok judges Claude's plan. A model finds its own output convincing by construction.
+4. **Every claim has support.** `path:line`, a command with its output, or an owner quote with a date. "Not found" is written plainly. A metric without a count means the audit has failed.
+5. **The primary source is the owner's words.** The owner's lines from the transcripts (`scripts/owner_words.py`), not retellings, not the model's memory, not handoff notes. A retelling loses the prohibitions, and the prohibitions are the most valuable part.
+6. **One release path.** There is exactly one door that releases the product (`scripts/release_gate.py`), and it demands a verdict bound to the sha of that very file. The other doors are closed by a hook (`scripts/guard_hook.py`). The hook's regex is the backstop; the lock is the single door.
+6a. **Intercept at the source.** A defect is caught at the entrance of the station where it is born, not by inspecting the finished product at the exit. A finished text or file can be checked, but the cause of the defect is no longer visible there, and the check costs more.
+7. **Owner sign-off means the owner's verbatim words.** An "approved" field counts only if the quoted text is found by the machine in the owner's messages no earlier than the moment of the lock (`owner_words.py said`). A bare `true` is not a signature. Lifting a lock ("no gate") also takes a quote and an entry in the log.
+8. **Honest judge rounds.** A round counts only if it is a new version and the judge has itself confirmed that the previous remarks were closed in substance. Neither the judge nor the executor knows the round limit; otherwise the limit becomes a loophole. A plan written to pass the refusal is a defect.
+9. **A minor contradiction between rules is settled by the owner's eye.** If two rules cannot both be met without spoiling the result, build the best version, write down both rules and the choice, show it to the owner and record the owner's words verbatim. Major laws (facts, prices, safety) are not lifted this way.
+10. **Without the "prod" tag the judge is an adviser.** On draft work the judge's remarks are taken on their merits and nobody waits for rounds. With the word "prod" the judge locks. Otherwise work stalls for hours.
+11. **Closed on production, open on everything else.** A hook error on a production action means a refusal. On reads and checks an error means a pass with a printed notice; otherwise one broken hook locks up all work.
+12. **The model does not edit the lock's state.** The hook forbids writes to its own state files and to its own registration. Hooks are edited only on the owner's word and with the tests run.
+13. **Before context compaction, the task state goes into a file.** What has been read, where we stand, what is still open. After compaction, reading counts from scratch: the model's memory of a file it read before compaction is worth nothing.
+14. **Your own before something new.** Before building, find what already exists in the repo (code search, past audits, existing locks). Building new is easier than digging up your own, which is why this step is skipped most often.
+15. **The report to the owner is in plain words.** The point in the first line, 3 to 7 items, no codes and no tables, one main question with a recommendation. Details go into a file, with a link.
+16. **An agent fan-out only on the owner's direct word.** Name the cost before launch. A harness flag or a system reminder is not the owner's word.
+17. **An audit only reads.** Do not touch production, live hardware, USB drives, databases or services; a website gets GET requests only. Run tests only if they write nothing.
 
-## Фаза 1: АУДИТ
+## Phase 1: AUDIT
 
-Подробные брифы ролей и форматы: `references/audit-method.md`. Шаблоны: `assets/`.
+Detailed role briefs and formats: `references/audit-method.md`. Templates: `assets/`.
 
-0. **Слово владельца дословно** в `SCOPE.md` (шаблон `assets/SCOPE.template.md`). Найди прошлые аудиты этого же контура: их открытые пункты перепроверяются, а не пишутся заново.
-1. **Корпус слов владельца.** `python scripts/owner_words.py collect --keys "<регулярка темы>" --out <аудит>/words` собирает его реплики из стенограмм Claude Code (только человек, без вставок хуков и чужого текста), дубли схлопывает, режет на куски для чтецов.
-2. **Участки.** Разбей контур на 5-12 участков по смыслу продукта (что выпускается, кому), не по папкам. У каждого участка пути, состояние на сегодня, известные хвосты.
-3. **Чтецы участков.** Каждый пишет `parts/<id>.md` по шаблону `assets/part.template.md` в пять разделов: опись (станции, массивы, что идёт в продукт, мёртвый груз), проблемы прода (тяжесть, опора, сценарий сбоя, починка одной фразой), вне замков (закон, где держится, почему), пункты прошлого аудита, что проверено машинно.
-4. **Чтец слов владельца.** Законы, запреты и просьбы с датой и цитатой, где каждый держится (замок, тест, только текст, нигде), противоречия со скилами и кодом, просьбы без исполнения.
-5. **Путь модели и путь пользователя.** Прогони хуки на образцовых запросах и посмотри, где модель проходит мимо. Пройди путь того, кто получает продукт (посетитель сайта, зритель, оператор железа), и найди, где он уходит или получает брак.
-6. **Проверяющий.** Каждую высокую и среднюю находку перепроверь с диска своими командами, сначала попытайся опровергнуть. Низкие выборочно, не меньше трети. Дубли между участками сведи. Вердикт: ПОДТВЕРЖДЕНО, ЧАСТИЧНО, ОПРОВЕРГНУТО, НЕ ПРОВЕРЕНО.
-7. **Заверение другой моделью.** Список «вне замков» с доводами отдай модели другого семейства (`scripts/cross_judge.py`), ответ сохрани дословно. Вопрос: убедительно ли «почему нет замка», что закрывать первым и каким замком.
-8. **Карта из данных.** `BRANCH_MAP.json` (станции, массивы, связи, замки, статусы; пример `assets/map.example.json`) и проверка `python scripts/map_check.py BRANCH_MAP.json`: связи ссылаются на существующие узлы, станции без замков перечислены. Чертёж только из карты: `python scripts/map_draw.py BRANCH_MAP.json --out img/` (SVG и HTML). Чертёж «из головы» повторяет слепоту того, кто его рисует.
-9. **Отчёт.** `AUDIT.md` по шаблону `assets/AUDIT.template.md`: в проблемы идут только ПОДТВЕРЖДЕНО и ЧАСТИЧНО, опровергнутое одной строкой в конце. План правок нумерованный, у каждого пункта проверка. До 8 вопросов владельцу, у каждого рекомендация. `SUMMARY.md` по `assets/SUMMARY.template.md`.
+0. **The owner's word, verbatim,** goes into `SCOPE.md` (template `assets/SCOPE.template.md`). Find past audits of the same pipeline: their open items are re-checked, not rewritten.
+1. **The corpus of the owner's words.** `python scripts/owner_words.py collect --keys "<topic regex>" --out <audit>/words` collects the owner's lines from Claude Code transcripts (the human only, without hook insertions or other people's text), collapses duplicates and cuts the result into chunks for the readers.
+2. **Sections.** Split the pipeline into 5 to 12 sections by the meaning of the product (what is released, and for whom), not by folders. Each section has its paths, its state today and its known loose ends.
+3. **Section readers.** Each one writes `parts/<id>.md` from the template `assets/part.template.md` in five parts: inventory (stations, datasets, what goes into the product, dead weight), production problems (severity, support, failure scenario, the fix in one sentence), outside the locks (the law, where it is held, why), items from the previous audit, and what was checked by machine.
+4. **The reader of the owner's words.** Laws, prohibitions and requests with a date and a quote; where each one is held (a lock, a test, text only, nowhere); contradictions with skills and code; requests that were never carried out.
+5. **The model's path and the user's path.** Run the hooks on sample requests and see where the model walks past them. Walk the path of whoever receives the product (a site visitor, a viewer, a hardware operator) and find where they leave or receive a defect.
+6. **The verifier.** Re-check every high and medium finding from disk with your own commands, and try to refute it first. Low findings are sampled, at least a third of them. Merge duplicates across sections. Verdict: CONFIRMED, PARTIAL, REFUTED, NOT CHECKED.
+7. **Review by a different model.** Hand the "outside the locks" list with its reasoning to a model from a different family (`scripts/cross_judge.py`) and save the answer verbatim. The question: is the "why there is no lock" convincing, what should be closed first, and with which lock.
+8. **A map built from data.** `BRANCH_MAP.json` (stations, datasets, links, locks, statuses; example `assets/map.example.json`) and the check `python scripts/map_check.py BRANCH_MAP.json`: links point at existing nodes, and stations without locks are listed. The diagram is drawn only from the map: `python scripts/map_draw.py BRANCH_MAP.json --out img/` (SVG and HTML). A diagram drawn "from the head" repeats the blind spots of whoever draws it.
+9. **The report.** `AUDIT.md` from the template `assets/AUDIT.template.md`: only CONFIRMED and PARTIAL go into the problems, and whatever was refuted gets one line at the end. The fix plan is numbered, and every item has a check. Up to 8 questions for the owner, each with a recommendation. `SUMMARY.md` from `assets/SUMMARY.template.md`.
 
-**Сколько агентов.** Малый аудит: по агенту на участок, чтец слов, проверяющий, сборщик (около 10). Большой: на участок три чтеца (опись, проблемы, вне замков), чтецы слов по кускам, проверяющие по участкам, заверение, карта, чертежи, двое рецензентов отчёта (около 100). Без субагентов делай по шагам сам, но проверку всё равно отдельным проходом со свежего чтения диска, лучше другой моделью. Пример сценария веера для Claude Code: `assets/workflow.example.js`.
+**How many agents.** A small audit: one agent per section, a reader of the owner's words, a verifier and an assembler (about 10). A large one: three readers per section (inventory, problems, outside the locks), readers of the owner's words by chunk, verifiers by section, the cross-model review, the map, the diagrams and two reviewers of the report (about 100). Without subagents, do the steps yourself, but still run verification as a separate pass from a fresh read of the disk, preferably with a different model. An example fan-out script for Claude Code: `assets/workflow.example.js`.
 
-## Фаза 2: ЗАМОК
+## Phase 2: LOCK
 
-Каталог замков и обходов: `references/lock-patterns.md`. Хуки Claude Code: `references/claude-code-hooks.md`.
+The catalog of locks and bypasses: `references/lock-patterns.md`. Claude Code hooks: `references/claude-code-hooks.md`.
 
-0. **Вход:** план правок из `AUDIT.md` и слово владельца на починку. Запиши `WORKFLOW.md` по `assets/WORKFLOW.lock.template.md`: у каждого пункта закон, тип замка, точка на пути, тест обходов, что решает владелец. **Охранная клауза:** до первой правки перечисли существующие замки контура и что в них нельзя ослаблять (реестр принуждений). Починка одного замка часто тихо открывает другой.
-1. **Выбери тип замка** по матрице в `references/lock-patterns.md`: замок внутри вызова (guard в обёртке API, без прохода запрос не уходит), единственная дверь выпуска с вердиктом по sha, хук на боковые двери, печать и билет (sha входа в билете = sha того, что реально ушло), подпись цитатой, слот общего ресурса (одна аренда на карту или порт).
-2. **Ставь замок внутрь пути, хук снаружи.** Замок в коде ловит любую дверь, которая идёт через этот код. Хук ловит двери, которые код обходят. Нужны оба.
-3. **Тест на каждую дверь.** Для каждого замка: законный путь проходит, каждая известная боковая дверь получает отказ, ошибка хука на производстве = отказ, дымовой прогон без записи (`HOOK_SMOKE=1`). Харнес: `python scripts/test_hook.py <хук> <кейсы.json>`, базовый набор обходов: `assets/bypass_cases.example.json`.
-4. **Прогон на историческом браке.** Замок, который пропускает старый брак, не замок. Подай ему тот самый файл или план, из-за которого всё началось: должен быть отказ с понятной причиной. Хороший эталон должен пройти.
-5. **Довод вместо молчания.** Если замок не ставишь, запиши довод с проверкой (команда и вывод), а не просто пропусти пункт.
-6. **Журнал и отчёт.** Каждый выпуск, снятие и отказ пишется строкой в jsonl. Пункт плана закрыт только с полем «проверено»: чем (тест, прогон, команда) и с числом или дословным выводом. Слово «сделано» без проверки пункт не закрывает. Коммит по пунктам плана. Отчёт владельцу простыми словами: что теперь заперто, что осталось текстом и почему, один вопрос.
+0. **Input:** the fix plan from `AUDIT.md` and the owner's word to fix. Write `WORKFLOW.md` from `assets/WORKFLOW.lock.template.md`: every item has its law, the lock type, the point on the path, the bypass test and what the owner decides. **Safeguard clause:** before the first edit, list the pipeline's existing locks and what must not be weakened in them (the enforcement register). Fixing one lock often quietly opens another.
+1. **Choose the lock type** from the matrix in `references/lock-patterns.md`: a lock inside the call (a guard in the API wrapper; without a pass the request does not leave), a single release door with a verdict bound to the sha, a hook on the side doors, a seal and a ticket (the input sha in the ticket equals the sha of what actually left), sign-off by quote, a shared-resource slot (one lease per card or port).
+2. **Put the lock inside the path and the hook outside.** A lock in the code catches every door that goes through that code. A hook catches the doors that go around the code. You need both.
+3. **A test for every door.** For each lock: the legitimate path passes, every known side door is refused, a hook error on production means a refusal, and there is a smoke run that writes nothing (`HOOK_SMOKE=1`). The harness: `python scripts/test_hook.py <hook> <cases.json>`; the base set of bypasses: `assets/bypass_cases.example.json`.
+4. **A run against the historical defect.** A lock that lets the old defect through is not a lock. Feed it the very file or plan that started it all: it must refuse, with a clear reason. A good reference sample must pass.
+5. **A reason instead of silence.** If you are not adding a lock, write down the reason with a check (a command and its output); do not just skip the item.
+6. **Log and report.** Every release, lift and refusal is written as a line of jsonl. A plan item is closed only with a "verified" field: by what (a test, a run, a command) and with a number or verbatim output. The word "done" without a check does not close an item. Commit per plan item. The report to the owner is in plain words: what is now locked, what is still text and why, and one question.
 
-## Гейт производства: когда скил обязателен на каждом выпуске
+## Production gate: when the skill is mandatory on every release
 
-Контур может держать этот скил гейтом всех продов: хук требует прочитать его до любого производственного действия (сборка, рендер, запись продукта, заливка, деплой, запись на носитель) и отдаёт судье вместе с планом. Тогда фазы аудита и замка не запускаются. План производства до первого действия отвечает на шесть вопросов, судья сверяет ответы с шагами плана:
+A pipeline can keep this skill as the gate for every production run: a hook requires reading it before any production action (a build, a render, a write of the product, an upload, a deploy, a write to removable media) and hands it to the judge together with the plan. In that case the audit and lock phases do not run. Before the first action, the production plan answers six questions, and the judge checks the answers against the steps of the plan:
 
-1. **Дверь выпуска.** Через что продукт уходит к людям или на железо (скрипт выпуска, заливка, деплой, запись на флешку) и какой замок стоит на этой двери. Замок есть: назови его и команду. Замка нет: так и напиши «двери с замком нет», ручную копию выпуском не называй.
-2. **Что дверь проверяет в самом продукте.** Хэш, содержимое, распознанная речь против сценария, счёт. Если проверка смотрит на поля, которые заполняешь ты сам, это бумага, и в плане так и пишется.
-3. **Кто судит.** Не автор продукта. Вердикт привязан к той версии, которая уходит (sha). Правка после суда = новый суд.
-4. **Боковые двери.** Какими ещё путями тот же продукт можно выпустить (`cp`, браузер, другой CLI, прямой HTTP) и что их держит. Ими не пользоваться, даже когда «быстрее».
-5. **Что держится только текстом.** Законы владельца для этого продукта, у которых нет замка: перечисли их, чтобы они были на виду, а не в памяти.
-6. **Сверка после выпуска.** Чем проверено, что ушло то же самое (sha копии, живая страница, скачанный обратно файл), и строка в журнал выпусков.
+1. **The release door.** What the product goes through on its way to people or to hardware (a release script, an upload, a deploy, a write to a USB drive) and which lock stands on that door. If there is a lock, name it and its command. If there is none, write exactly that, "there is no locked door", and do not call a manual copy a release.
+2. **What the door checks in the product itself.** A hash, the content, recognized speech against the script, a count. If the check looks at fields you fill in yourself, that is paperwork, and the plan says so.
+3. **Who judges.** Not the author of the product. The verdict is bound to the version that leaves (the sha). An edit after the judgment means a new judgment.
+4. **Side doors.** By which other routes the same product can be released (`cp`, a browser, another CLI, direct HTTP) and what holds them shut. Do not use them, even when it is "faster".
+5. **What is held by text alone.** The owner's laws for this product that have no lock: list them so they stay in view and not in memory.
+6. **The check after release.** What confirmed that the same thing went out (the sha of the copy, the live page, the file downloaded back), plus a line in the release log.
 
-На каждом выпуске новых замков не строить: найденную дыру записать в отчёт владельцу и предложить фазой ЗАМОК. Без метки «прод» судья советует (закон 10), с меткой запирает план без ответов на эти вопросы.
+Do not build new locks on every release: write the hole you found into the report to the owner and propose it as a LOCK phase. Without the "prod" tag the judge advises (law 10); with the tag it locks a plan that does not answer these questions.
 
-**Без владельца не делать:** менять пароли и ключи, выкатывать в прод, ослаблять существующие замки, править регистрацию хуков без его слова, править состояние замков руками.
+**Do not do without the owner:** change passwords and keys, deploy to production, weaken existing locks, edit hook registration without the owner's word, edit lock state by hand.
 
-## Чем проверить себя перед выдачей
+## How to check yourself before handing over
 
-- Каждое утверждение отчёта имеет опору, метрики посчитаны командой.
-- Находки прошли проверяющего, опровергнутое не попало в проблемы.
-- `map_check.py` прошёл, чертёж собран из карты.
-- Каждый новый замок покрыт тестом обходов и прогнан на историческом браке.
-- Выжимка владельцу: смысл первой строкой, один вопрос с рекомендацией.
+- Every claim in the report has support, and the metrics were counted by a command.
+- The findings went through the verifier, and nothing refuted ended up among the problems.
+- `map_check.py` passed, and the diagram was built from the map.
+- Every new lock is covered by a bypass test and was run against the historical defect.
+- The summary for the owner: the point in the first line, one question with a recommendation.

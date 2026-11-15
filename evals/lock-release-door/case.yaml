@@ -3,7 +3,8 @@ name: lock-release-door
 context:
   scaffold_script: place-files.sh
 expected_outcome: |
-  release.py (или новая дверь) выпускает только с вердиктом, у которого sha256 совпадает с файлом, судья отработал
-  и судья не автор; копия в dist сверена по sha. Цель hotfix больше не кладёт в dist мимо двери или заперта.
-  Есть тест обходов с числом прошедших проверок. Исторический случай (файл изменён после ревью) получает отказ,
-  законный путь проходит. Ответ владельцу простыми словами: что заперто, что осталось, один вопрос.
+  release.py (or a new door) releases only with a verdict whose sha256 matches the file, where the judge really ran
+  and the judge is not the author; the copy in dist is verified by sha. The hotfix target no longer puts files into dist
+  around the door, or it is locked. There is a bypass test with the number of checks passed. The historical case
+  (the file changed after the review) is refused, and the legitimate path passes. The answer to the owner is in plain
+  words: what is locked, what remains, one question.
