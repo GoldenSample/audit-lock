@@ -35,7 +35,7 @@
    /plugin marketplace add GoldenSample/audit-lock
    /plugin install audit-lock@goldensample
    ```
-   Или одной командой из терминала (проверено на Claude Code 2.1.325):
+   Или одной командой из терминала (Claude Code 2.1.292 или новее; проверено на 2.1.325):
    ```
    claude plugin install audit-lock --marketplace GoldenSample/audit-lock
    ```
@@ -51,6 +51,42 @@
 ```
 python scripts/test_hook.py scripts/guard_hook.py assets/bypass_cases.example.json --env GUARD_CONFIG=assets/guard_config.example.json
 ```
+
+## Попробовать
+
+Скил сделан и проверен в Claude Code, фаза замка ставит хуки Claude Code. Три запроса ниже показывают суть. Для первых двух в репо лежит маленький пример проекта: скопируй файлы из `evals/<кейс>/files/` в пустую папку (или запусти там `evals/<кейс>/place-files.sh`), открой в этой папке Claude Code и дай запрос. Первые два запроса взяты из эвалов как есть, на английском.
+
+1. Аудит, пример `evals/audit-finds-text-only-rule/files/`:
+   > audit this repo: which rules from the README are really held by code and which only by text, and where the firmware can get into dist around the check. don't launch agents, do it all yourself, don't edit the code, just the report: AUDIT.md and a short summary SUMMARY.md
+2. Замок, пример `evals/lock-release-door/files/`:
+   > fix it: the firmware must get into dist only through scripts/release.py, and only with a review verdict bound to the file's content, with the reviewer not being the author. hotfix in the Makefile currently puts it there around the check, close that. bypass tests are a must, and show that the lock would have stopped the old case: app.bin was edited after a review with approved true, and it went to dist
+3. Проверка хука, пример не нужен:
+   > check that the side-door hook from audit-lock holds on this machine: run its bypass tests
+
+Хороший результат первых двух описывают грейдеры в `evals/<кейс>/graders/`.
+
+## Что читает, запускает, отправляет и меняет
+
+У audit-lock нет сервера, аккаунта и телеметрии, автору от него ничего не приходит. Скрипты работают на твоей машине на Python 3.8+ и его стандартной библиотеке.
+
+- **Читает.** Файлы проекта, который проверяешь. На аудите и на выпуске с `--owner-quote` скрипт `scripts/owner_words.py` читает журналы сессий Claude Code на этой машине (`~/.claude/projects/*/*.jsonl`). Берёт только строки, набранные тобой: без текста модели и вставок хуков, вставленные блоки вырезает и помечает. С `--keys` оставляет только строки по теме аудита.
+- **Пишет, только в твои папки.** Файлы аудита в папку, которую назовёшь: `SCOPE.md`, `AUDIT.md`, `SUMMARY.md`, `parts/`, `BRANCH_MAP.json`, `img/` и корпус `words/` со временем, коротким номером сессии, именем папки проекта и текстом каждой взятой строки. Файл вердикта рядом с проверяемым файлом (`<файл>.verdict.json`). Журнал выпусков `releases.jsonl` и журнал хука, если он задан в настройке.
+- **Меняет настройки Claude Code, только по твоему слову на фазе замка.** Копирует скрипты замка в проект и добавляет хук `PreToolUse` в `.claude/settings.json` проекта. Хук отказывает только тем боковым дверям, которые ты согласился закрыть. Фаза замка ставит хуки, а не правила разрешений, а пользовательские настройки трогает, только если попросишь.
+- **Отправляет, только когда запускаешь.** `scripts/cross_judge.py` шлёт файл запроса на OpenAI-совместимый адрес, который ты указал в `--url`, с ключом из переменной окружения, которую ты назвал (по умолчанию `JUDGE_API_KEY`). Ключ скрипт не пишет ни в файлы, ни в командную строку. Ответ он сохраняет в файл как второе мнение для отчёта, и скил не считает этот ответ инструкцией. Без этого шага с машины ничего не уходит.
+- **Запускает.** Python-скрипты из `scripts/`. `scripts/test_hook.py` запускает хук дочерним процессом с урезанным окружением. Веер субагентов запускается, только если ты прямо попросишь, и скил заранее называет цену.
+
+## Приватность, поддержка, безопасность
+
+- Приватность: [PRIVACY.md](PRIVACY.md) (на английском).
+- Вопросы и ошибки: [GitHub Issues](https://github.com/GoldenSample/audit-lock/issues).
+- Уязвимости: [SECURITY.md](SECURITY.md) (на английском).
+
+## Если не работает
+
+- **«LOCK NOT WORKING: python not found».** Команда хука не нашла рабочий Python. Поставь Python 3.8 или новее и добавь его в `PATH`. В Windows `python` бывает заглушкой из Store, которая ничего не запускает; команда из `references/claude-code-hooks.md` пробует по очереди `python3`, `python` и `py`.
+- **Хук отказывает законной команде или пропускает боковую дверь.** Добавь эту команду кейсом в свою копию `assets/bypass_cases.example.json`, запусти `python scripts/test_hook.py <хук> <кейсы.json>`, поправь `allowed` или `protected` в настройке хука и прогони тесты снова.
+- **После обновления плагина пропал журнал выпусков.** `release_gate.py` пишет `releases.jsonl` рядом с собой, если не передан `--journal`. Держи скрипты замка в проекте, а не в папке плагина: папка плагина меняется с каждым обновлением.
+- **Скил не появился после установки.** Начни новую сессию или запусти `/reload-plugins`. Потом проверь, что `audit-lock` есть в `claude plugin list` и включён, и загляни во вкладку Errors в `/plugin`.
 
 ## Откуда
 
