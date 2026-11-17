@@ -6,26 +6,21 @@ A short cheat sheet for building locks. The format of events and fields changes 
 
 Per project (`.claude/settings.json` or `.claude/settings.local.json`) or per user (`~/.claude/settings.json`):
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {"matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit",
-       "hooks": [{"type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_hook.py\"", "timeout": 60}]},
-      {"matcher": "mcp__.*__file_upload|mcp__.*browser.*|mcp__computer-use__.*",
-       "hooks": [{"type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/upload_gate.py\""}]}
-    ],
-    "SessionStart": [{"matcher": "startup|resume|clear|compact", "hooks": [{"type": "command", "command": "..."}]}],
-    "PreCompact": [{"hooks": [{"type": "command", "command": "..."}]}],
-    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "..."}]}],
-    "Stop": [{"hooks": [{"type": "command", "command": "..."}]}]
-  }
-}
-```
+The full example is in `assets/settings.hooks.example.json`: a `PreToolUse` lock on the shell and file tools, a second one on MCP upload and browser tools, and the `SessionStart`, `PreCompact`, `UserPromptSubmit` and `Stop` slots.
 
 - `matcher` is a regex over the tool name. MCP tools are named `mcp__<server>__<tool>`: they are easy to forget, and then an upload through the browser or an application's terminal goes around the lock.
 - On Windows the interpreter may be called `python`, `python3` or `py`, and `python` can be a Store stub that runs nothing. A reliable command tries the variants and checks that the interpreter is alive:
-  `sh -c 'F="$CLAUDE_PROJECT_DIR/.claude/hooks/guard_hook.py"; for P in python3 python py; do if command -v "$P" >/dev/null 2>&1 && "$P" -c "" >/dev/null 2>&1; then PYTHONIOENCODING=utf-8 exec "$P" "$F"; fi; done; echo "LOCK NOT WORKING: python not found"; exit 0'`.
+  The same command split over lines for reading (in `settings.json` it stays one string):
+  ```sh
+  sh -c '
+    F="$CLAUDE_PROJECT_DIR/.claude/hooks/guard_hook.py"
+    for P in python3 python py; do
+      if command -v "$P" >/dev/null 2>&1 && "$P" -c "" >/dev/null 2>&1; then
+        PYTHONIOENCODING=utf-8 exec "$P" "$F"
+      fi
+    done
+    echo "LOCK NOT WORKING: python not found"; exit 0'
+  ```
   If there is no interpreter, the hook says so out loud and does not silently let production through.
 - The hook's output is UTF-8 (`PYTHONIOENCODING=utf-8` or reconfiguring stdout in the code); otherwise non-ASCII text in the refusal reason turns into garbage or an empty answer.
 

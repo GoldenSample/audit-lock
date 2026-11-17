@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit",
+       "hooks": [{"type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_hook.py\"", "timeout": 60}]},
+      {"matcher": "mcp__.*__file_upload|mcp__.*browser.*|mcp__computer-use__.*",
+       "hooks": [{"type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/upload_gate.py\""}]}
+    ],
+    "SessionStart": [{"matcher": "startup|resume|clear|compact", "hooks": [{"type": "command", "command": "..."}]}],
+    "PreCompact": [{"hooks": [{"type": "command", "command": "..."}]}],
+    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "..."}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "..."}]}]
+  }
+}

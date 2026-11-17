@@ -48,7 +48,10 @@ def main() -> int:
         print(__doc__)
         return 2
     hook, cases_path = a[0], a[1]
-    env = dict(os.environ, PYTHONIOENCODING="utf-8", HOOK_SMOKE="1")
+    keep = ("PATH", "PATHEXT", "SYSTEMROOT", "SYSTEMDRIVE", "COMSPEC", "TEMP", "TMP", "HOME", "USERPROFILE",
+            "APPDATA", "LOCALAPPDATA", "LANG", "LC_ALL", "GUARD_CONFIG", "CLAUDE_PROJECT_DIR")
+    env = {k: os.environ[k] for k in keep if k in os.environ}  # only what a hook needs, not the whole environment
+    env.update(PYTHONIOENCODING="utf-8", HOOK_SMOKE="1")
     py = sys.executable
     for i, x in enumerate(a):
         if x == "--env" and i + 1 < len(a):

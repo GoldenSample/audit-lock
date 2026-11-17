@@ -42,7 +42,7 @@ Shell commands:
 - Redirection with `>` and `>>`, `tee`, a heredoc `cat > file <<EOF`.
 - Inline code: `python -c "open(...,'w')"`, `shutil.copy`, `write_bytes`, `node -e "fs.writeFileSync(...)"`.
 - Paths: a relative path after `cd`, different letter case, backslashes and forward slashes, `\\?\` long paths, a variable `$d`, a drive letter through `subst`, a symlink or junction to the protected folder.
-- Splitting: the protected path in quotes, string concatenation, a base64 command (`powershell -EncodedCommand`, `base64 -d | sh`).
+- Splitting: the protected path in quotes, string concatenation, an encoded command (the PowerShell switch for an encoded command, or a base64 payload that is decoded and piped into a shell).
 - Two steps: write a script to a harmless place, then run `python script.py` in a second call. A hook on the command sees only the launch. Only a lock at the exit (2.2) or a content check on the consumer's side catches this.
 - Deferred launch: the task scheduler, cron, `at`, a service. The hook lets it through now, and the action happens without the agent.
 
