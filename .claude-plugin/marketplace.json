@@ -1,0 +1,23 @@
+{
+  "name": "goldensample",
+  "description": "GoldenSample skills for Claude Code: audit an agent setup and lock its rules in code.",
+  "owner": {
+    "name": "GoldenSample",
+    "url": "https://github.com/GoldenSample"
+  },
+  "plugins": [
+    {
+      "name": "audit-lock",
+      "source": "./",
+      "description": "Audit an agent setup for rules that live only in text, then lock them on the action path: a sha256-bound release door, a hook on side doors, bypass tests.",
+      "author": {
+        "name": "GoldenSample"
+      },
+      "homepage": "https://github.com/GoldenSample/audit-lock",
+      "repository": "https://github.com/GoldenSample/audit-lock",
+      "license": "MIT",
+      "keywords": ["audit", "guardrails", "hooks", "release-gate", "agent-skills"],
+      "category": "security"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "audit-lock",
+  "version": "1.0.2",
+  "description": "Audit a codebase or agent setup for rules that live only in text, then put machine locks on the action path: one release door bound to the file's sha256, a hook on the side doors, bypass tests, and a run on the historical defect.",
+  "author": {
+    "name": "GoldenSample",
+    "url": "https://github.com/GoldenSample"
+  },
+  "homepage": "https://github.com/GoldenSample/audit-lock",
+  "repository": "https://github.com/GoldenSample/audit-lock",
+  "documentationUrl": "https://github.com/GoldenSample/audit-lock#readme",
+  "supportUrl": "https://github.com/GoldenSample/audit-lock/issues",
+  "license": "MIT",
+  "keywords": ["audit", "guardrails", "hooks", "release-gate", "claude-code", "agent-skills"],
+  "icon": "./.claude-plugin/icon.png"
+}

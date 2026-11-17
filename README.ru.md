@@ -30,7 +30,16 @@
 
 ## Как начать
 
-1. Положи папку `audit-lock` в папку скилов (`~/.claude/skills/` или `.claude/skills/` проекта). Проще всего клоном:
+1. Поставь плагином Claude Code. Внутри Claude Code:
+   ```
+   /plugin marketplace add GoldenSample/audit-lock
+   /plugin install audit-lock@goldensample
+   ```
+   Или одной командой из терминала (проверено на Claude Code 2.1.325):
+   ```
+   claude plugin install audit-lock --marketplace GoldenSample/audit-lock
+   ```
+   Без системы плагинов положи папку `audit-lock` в папку скилов (`~/.claude/skills/` или `.claude/skills/` проекта), например клоном:
    ```
    git clone https://github.com/GoldenSample/audit-lock ~/.claude/skills/audit-lock
    ```

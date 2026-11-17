@@ -30,7 +30,16 @@ The skill answers three questions that sooner or later face any large machine:
 
 ## Getting started
 
-1. Put the `audit-lock` folder into your skills folder (`~/.claude/skills/` or the project's `.claude/skills/`). The easiest way is a clone:
+1. Install it as a Claude Code plugin. Inside Claude Code:
+   ```
+   /plugin marketplace add GoldenSample/audit-lock
+   /plugin install audit-lock@goldensample
+   ```
+   Or in one command from a terminal (checked on Claude Code 2.1.325):
+   ```
+   claude plugin install audit-lock --marketplace GoldenSample/audit-lock
+   ```
+   Without the plugin system, put the `audit-lock` folder into your skills folder (`~/.claude/skills/` or the project's `.claude/skills/`), for example with a clone:
    ```
    git clone https://github.com/GoldenSample/audit-lock ~/.claude/skills/audit-lock
    ```
